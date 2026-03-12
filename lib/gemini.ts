@@ -251,9 +251,16 @@ function buildCreatorIdentifier(channel: ChannelInfo): string {
   return parts.join("\n");
 }
 
-function truncateResearch(text: string): string {
-  if (text.length <= RESEARCH_MAX_CHARS) return text;
-  return text.slice(0, RESEARCH_MAX_CHARS) + "\n\n（調査結果が長いため、ここまでで切り捨てています）";
+/** リサーチ結果からタグ境界を壊す文字列を無害化し、長さを制限する */
+function sanitizeResearch(text: string): string {
+  // </RESEARCH>, </DATA>, 閉じタグ風の文字列を全て除去してタグ境界の突破を防ぐ
+  let sanitized = text
+    .replace(/<\/?RESEARCH\s*>/gi, "")
+    .replace(/<\/?DATA\s*>/gi, "");
+  if (sanitized.length > RESEARCH_MAX_CHARS) {
+    sanitized = sanitized.slice(0, RESEARCH_MAX_CHARS) + "\n\n（調査結果が長いため、ここまでで切り捨てています）";
+  }
+  return sanitized;
 }
 
 export async function researchWithGoogleSearch(
@@ -286,7 +293,7 @@ ${buildCreatorIdentifier(channel)}
     },
   });
 
-  return truncateResearch(response.text || "リサーチ結果を取得できませんでした");
+  return sanitizeResearch(response.text || "リサーチ結果を取得できませんでした");
 }
 
 function buildDeepResearchPrompt(channel: ChannelInfo, brandName: string): string {
@@ -348,17 +355,35 @@ export async function pollDeepResearch(
 
   const current = await client.interactions.get(interactionId);
 
-  if (current.status === "completed") {
+  const interactionStatus = current.status as string;
+
+  if (interactionStatus === "completed") {
     const outputs = current.outputs || [];
     const lastOutput = outputs[outputs.length - 1];
     const text = lastOutput?.text || "リサーチ結果を取得できませんでした";
-    return { status: "completed", text: truncateResearch(text) };
+    return { status: "completed", text: sanitizeResearch(text) };
   }
 
-  if (current.status === "failed" || current.status === "cancelled") {
-    return { status: "failed", text: `Deep Research が失敗しました: ${current.status}` };
+  if (interactionStatus === "failed" || interactionStatus === "cancelled") {
+    return { status: "failed", text: `Deep Research が失敗しました: ${interactionStatus}` };
   }
 
+  // incomplete: 調査が途中で終了した（部分結果がある場合はそれを返す）
+  if (interactionStatus === "incomplete") {
+    const outputs = current.outputs || [];
+    const lastOutput = outputs[outputs.length - 1];
+    if (lastOutput?.text) {
+      return { status: "completed", text: sanitizeResearch(lastOutput.text) };
+    }
+    return { status: "failed", text: "Deep Research が不完全な状態で終了しました" };
+  }
+
+  // requires_action: SDKで定義されているが通常は発生しない → 失敗扱い
+  if (interactionStatus === "requires_action") {
+    return { status: "failed", text: "Deep Research が追加アクションを要求しています（非対応）" };
+  }
+
+  // processing, thinking 等 → まだ進行中
   return { status: "pending" };
 }
 
@@ -417,9 +442,26 @@ export async function analyzeBrandFit(
   if (typeof raw.contentStyleSummary !== "string") errors.push("contentStyleSummary");
   if (typeof raw.audienceProfile !== "string") errors.push("audienceProfile");
   if (typeof raw.brandAlignmentReasoning !== "string") errors.push("brandAlignmentReasoning");
-  if (!raw.brandSafety || typeof raw.brandSafety !== "object") errors.push("brandSafety");
+  if (!raw.brandSafety || typeof raw.brandSafety !== "object") {
+    errors.push("brandSafety");
+  } else if (Array.isArray(raw.brandSafety.concerns)) {
+    const validConcerns = raw.brandSafety.concerns.filter(
+      (c: unknown) => !!c && typeof c === "object" && typeof (c as Record<string, unknown>).description === "string"
+    );
+    if (validConcerns.length === 0 && raw.brandSafety.concerns.length > 0) {
+      errors.push("brandSafety.concerns (全要素がスキーマ不適合)");
+    }
+  }
   if (!Array.isArray(raw.strengths)) errors.push("strengths");
   if (!Array.isArray(raw.risks)) errors.push("risks");
+  if (Array.isArray(raw.risks)) {
+    const validRisks = raw.risks.filter(
+      (r: unknown) => !!r && typeof r === "object" && typeof (r as Record<string, unknown>).description === "string"
+    );
+    if (validRisks.length === 0 && raw.risks.length > 0) {
+      errors.push("risks (全要素がスキーマ不適合)");
+    }
+  }
   if (!Array.isArray(raw.collabIdeas) || raw.collabIdeas.length === 0) errors.push("collabIdeas");
 
   if (errors.length > 0) {
