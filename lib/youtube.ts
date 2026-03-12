@@ -55,6 +55,7 @@ interface YouTubePlaylistItemsResponse {
       resourceId: { videoId: string };
     };
   }>;
+  nextPageToken?: string;
 }
 
 interface YouTubeVideosResponse {
@@ -106,6 +107,13 @@ export async function resolveChannel(input: string): Promise<{ channel: ChannelI
       channelData = await ytFetch<YouTubeChannelResponse>("channels", {
         part: "snippet,statistics,contentDetails",
         forHandle: parsed.value.replace(/^@/, ""),
+      });
+      break;
+
+    case "username":
+      channelData = await ytFetch<YouTubeChannelResponse>("channels", {
+        part: "snippet,statistics,contentDetails",
+        forUsername: parsed.value,
       });
       break;
 
@@ -176,63 +184,51 @@ function toVideoInfo(item: NonNullable<YouTubeVideosResponse["items"]>[number]):
   };
 }
 
-export async function getVideos(
-  uploadsPlaylistId: string,
-  channelId: string
-): Promise<VideoInfo[]> {
-  // 最新動画とチャンネル全体の人気動画を並行取得
-  const [playlistData, popularSearchData] = await Promise.all([
-    // 最新アップロード（最大10本）
-    ytFetch<YouTubePlaylistItemsResponse>("playlistItems", {
+export async function getVideos(uploadsPlaylistId: string): Promise<VideoInfo[]> {
+  // playlistItems を最大3ページ（150本）取得してクォータ節約（3単位 vs search.listの100単位）
+  const allVideoIds: string[] = [];
+  let pageToken: string | undefined;
+  const MAX_PAGES = 3;
+
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const params: Record<string, string> = {
       part: "snippet",
       playlistId: uploadsPlaylistId,
-      maxResults: "10",
-    }),
-    // チャンネル全体から人気動画を検索（viewCount順）
-    ytFetch<YouTubeSearchResponse>("search", {
-      part: "snippet",
-      channelId,
-      order: "viewCount",
-      type: "video",
-      maxResults: "10",
-    }),
-  ]);
+      maxResults: "50",
+    };
+    if (pageToken) params.pageToken = pageToken;
 
-  const latestIds = playlistData.items?.map((item) => item.snippet.resourceId.videoId) || [];
-  const popularVideoIds = popularSearchData.items
-    ?.map((item) => item.id.videoId)
-    .filter((id): id is string => !!id) || [];
+    const playlistData = await ytFetch<YouTubePlaylistItemsResponse>("playlistItems", params);
+    const ids = playlistData.items?.map((item) => item.snippet.resourceId.videoId) || [];
+    allVideoIds.push(...ids);
 
-  const allIds = [...new Set([...latestIds, ...popularVideoIds])];
-  if (allIds.length === 0) return [];
-
-  // 統計情報をバッチ取得
-  const videosData = await ytFetch<YouTubeVideosResponse>("videos", {
-    part: "snippet,statistics",
-    id: allIds.join(","),
-  });
-
-  const videoMap = new Map(
-    videosData.items?.map((item) => [item.id, toVideoInfo(item)]) || []
-  );
-
-  // 最新5本（順序保持）
-  const latest5: VideoInfo[] = [];
-  for (const id of latestIds) {
-    if (latest5.length >= 5) break;
-    const v = videoMap.get(id);
-    if (v) latest5.push(v);
+    pageToken = playlistData.nextPageToken;
+    if (!pageToken) break;
   }
 
-  // チャンネル全体の人気上位5本（最新5本と重複除外）
-  const latestIdSet = new Set(latest5.map((v) => v.id));
-  const popular5: VideoInfo[] = [];
-  for (const id of popularVideoIds) {
-    if (popular5.length >= 5) break;
-    if (latestIdSet.has(id)) continue;
-    const v = videoMap.get(id);
-    if (v) popular5.push(v);
+  if (allVideoIds.length === 0) return [];
+
+  // videos.list でバッチ取得（50件ずつ）
+  const allVideos: VideoInfo[] = [];
+  for (let i = 0; i < allVideoIds.length; i += 50) {
+    const batch = allVideoIds.slice(i, i + 50);
+    const videosData = await ytFetch<YouTubeVideosResponse>("videos", {
+      part: "snippet,statistics",
+      id: batch.join(","),
+    });
+    if (videosData.items) {
+      allVideos.push(...videosData.items.map(toVideoInfo));
+    }
   }
+
+  // 最新5本（allVideoIdsの順序=新しい順）
+  const latest5 = allVideos.slice(0, 5);
+  const latest5Ids = new Set(latest5.map((v) => v.id));
+
+  // 残りから再生数上位5本（チャンネル全体150本の中から選定）
+  const remaining = allVideos.filter((v) => !latest5Ids.has(v.id));
+  remaining.sort((a, b) => b.viewCount - a.viewCount);
+  const popular5 = remaining.slice(0, 5);
 
   return [...latest5, ...popular5];
 }

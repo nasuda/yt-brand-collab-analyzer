@@ -1,13 +1,15 @@
 "use client";
 
 import { useAnalysis } from "@/hooks/useAnalysis";
+import { useExportPDF } from "@/hooks/useExportPDF";
 import { AnalysisForm } from "@/components/AnalysisForm";
 import { AnalysisResults } from "@/components/AnalysisResults";
 import { Button } from "@/components/ui/button";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, FileDown } from "lucide-react";
 
 export default function Home() {
   const { status, result, error, loadingStep, analyze, reset } = useAnalysis();
+  const { exportPDF, exporting } = useExportPDF();
 
   return (
     <main className="min-h-screen">
@@ -30,7 +32,19 @@ export default function Home() {
           )}
 
           {status === "success" && (
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const channelName = result?.channel.title || "analysis";
+                  const brand = result?.brandName || "brand";
+                  exportPDF("analysis-results", `${channelName}_x_${brand}`);
+                }}
+                disabled={exporting}
+              >
+                <FileDown className="h-4 w-4" />
+                {exporting ? "PDF生成中..." : "PDF出力"}
+              </Button>
               <Button variant="outline" onClick={reset}>
                 <RotateCcw className="h-4 w-4" />
                 新しい分析

@@ -1,4 +1,4 @@
-export type ChannelInputType = "handle" | "channelId" | "url" | "text";
+export type ChannelInputType = "handle" | "channelId" | "username" | "text";
 
 export interface ParsedChannelInput {
   type: ChannelInputType;
@@ -42,10 +42,16 @@ export function parseChannelInput(input: string): ParsedChannelInput {
         return { type: "handle", value: `@${handleMatch[1]}` };
       }
 
-      // /c/customname or /user/username → handle として解決
-      const customMatch = path.match(/\/(c|user)\/([\w.-]+)/);
+      // /c/customname → handle として解決（customUrlはhandleと同等）
+      const customMatch = path.match(/\/c\/([\w.-]+)/);
       if (customMatch) {
-        return { type: "handle", value: `@${customMatch[2]}` };
+        return { type: "handle", value: `@${customMatch[1]}` };
+      }
+
+      // /user/username → forUsername API で解決（旧式、handleとは別）
+      const userMatch = path.match(/\/user\/([\w.-]+)/);
+      if (userMatch) {
+        return { type: "username", value: userMatch[1] };
       }
     }
   } catch {
@@ -56,16 +62,20 @@ export function parseChannelInput(input: string): ParsedChannelInput {
   return { type: "text", value: trimmed };
 }
 
+import type { ResearchMode } from "./types";
+
+const VALID_MODES: ResearchMode[] = ["basic", "search", "deep-research"];
+
 export function validateAnalysisRequest(body: unknown): {
   valid: boolean;
   error?: string;
-  data?: { channelInput: string; brandName: string; brandDescription?: string };
+  data?: { channelInput: string; brandName: string; brandDescription?: string; researchMode: ResearchMode };
 } {
   if (!body || typeof body !== "object") {
     return { valid: false, error: "リクエストボディが不正です" };
   }
 
-  const { channelInput, brandName, brandDescription } = body as Record<
+  const { channelInput, brandName, brandDescription, researchMode } = body as Record<
     string,
     unknown
   >;
@@ -78,6 +88,10 @@ export function validateAnalysisRequest(body: unknown): {
     return { valid: false, error: "ブランド名は必須です" };
   }
 
+  const mode = (typeof researchMode === "string" && VALID_MODES.includes(researchMode as ResearchMode))
+    ? researchMode as ResearchMode
+    : "basic";
+
   return {
     valid: true,
     data: {
@@ -85,6 +99,7 @@ export function validateAnalysisRequest(body: unknown): {
       brandName: brandName.trim(),
       brandDescription:
         typeof brandDescription === "string" ? brandDescription.trim() || undefined : undefined,
+      researchMode: mode,
     },
   };
 }

@@ -39,7 +39,7 @@ export function AnalysisResults({ state }: AnalysisResultsProps) {
   const { channel, videos, analysis, brandName } = state.result;
 
   return (
-    <div className="space-y-6">
+    <div id="analysis-results" className="space-y-6">
       <ChannelOverview channel={channel} />
       <BrandFitScore analysis={analysis} brandName={brandName} />
       <CollabIdeas ideas={analysis.collabIdeas} />
