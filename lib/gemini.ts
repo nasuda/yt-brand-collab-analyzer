@@ -252,7 +252,7 @@ function buildCreatorIdentifier(channel: ChannelInfo): string {
 }
 
 /** リサーチ結果からタグ境界を壊す文字列を無害化し、長さを制限する */
-function sanitizeResearch(text: string): string {
+export function sanitizeResearch(text: string): string {
   // </RESEARCH>, </DATA>, 閉じタグ風の文字列を全て除去してタグ境界の突破を防ぐ
   let sanitized = text
     .replace(/<\/?RESEARCH\s*>/gi, "")

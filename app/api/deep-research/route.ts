@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateAnalysisRequest } from "@/lib/validators";
 import { resolveChannel, getVideos, getVideoComments } from "@/lib/youtube";
-import { startDeepResearch, pollDeepResearch, performResearch, analyzeBrandFit } from "@/lib/gemini";
+import { startDeepResearch, pollDeepResearch, performResearch, analyzeBrandFit, sanitizeResearch } from "@/lib/gemini";
 
 // POST: Deep Research を開始し、interactionId + YouTube データを返す
 export async function POST(request: NextRequest) {
@@ -29,6 +29,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: validation.error }, { status: 400 });
       }
 
+      // クライアントから送られる creatorResearch は非信頼データなのでサニタイズ必須
+      const sanitizedResearch = typeof creatorResearch === "string"
+        ? sanitizeResearch(creatorResearch)
+        : undefined;
+
       const { channel, uploadsPlaylistId } = await resolveChannel(channelInput);
       const videos = await getVideos(uploadsPlaylistId);
       const comments = await getVideoComments(videos.map((v) => v.id));
@@ -39,7 +44,7 @@ export async function POST(request: NextRequest) {
         comments,
         brandName,
         brandDescription,
-        typeof creatorResearch === "string" ? creatorResearch : undefined
+        sanitizedResearch
       );
 
       return NextResponse.json({

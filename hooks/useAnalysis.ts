@@ -45,8 +45,16 @@ export function useAnalysis() {
   });
   const abortRef = useRef(false);
 
+  const isAborted = () => abortRef.current;
+
   const setError = (error: string) => {
+    if (isAborted()) return;
     setState({ status: "error", result: null, error, loadingStep: "" });
+  };
+
+  const setSuccess = (result: AnalysisResult) => {
+    if (isAborted()) return;
+    setState({ status: "success", result, error: null, loadingStep: "" });
   };
 
   /** basic / search モードの分析 */
@@ -75,7 +83,7 @@ export function useAnalysis() {
         setError((data.error as string) || "分析に失敗しました");
         return;
       }
-      setState({ status: "success", result: data as unknown as AnalysisResult, error: null, loadingStep: "" });
+      setSuccess(data as unknown as AnalysisResult);
     } catch {
       clearInterval(stepTimer);
       setError("ネットワークエラーが発生しました");
@@ -102,6 +110,7 @@ export function useAnalysis() {
 
     // フォールバック: Deep Research API非対応 → そのまま結果を使って分析
     if (startData.fallback) {
+      if (isAborted()) return;
       setState((prev) => ({ ...prev, loadingStep: "Google検索で調査中（フォールバック）..." }));
       const { ok, data } = await postJSON("/api/deep-research", {
         action: "analyze",
@@ -112,7 +121,7 @@ export function useAnalysis() {
         setError((data.error as string) || "分析に失敗しました");
         return;
       }
-      setState({ status: "success", result: data as unknown as AnalysisResult, error: null, loadingStep: "" });
+      setSuccess(data as unknown as AnalysisResult);
       return;
     }
 
@@ -169,6 +178,8 @@ export function useAnalysis() {
 
     if (abortRef.current) return;
 
+    if (isAborted()) return;
+
     // Step 3: 調査結果をもとに最終分析
     setState((prev) => ({ ...prev, loadingStep: "調査結果をもとにブランド適合性を分析中..." }));
 
@@ -183,12 +194,7 @@ export function useAnalysis() {
       return;
     }
 
-    setState({
-      status: "success",
-      result: analyzeData as unknown as AnalysisResult,
-      error: null,
-      loadingStep: "",
-    });
+    setSuccess(analyzeData as unknown as AnalysisResult);
   };
 
   const analyze = useCallback(
