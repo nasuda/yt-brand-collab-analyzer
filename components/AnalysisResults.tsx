@@ -3,9 +3,13 @@
 import { AnalysisState } from "@/lib/types";
 import { LoadingState } from "./LoadingState";
 import { ChannelOverview } from "./ChannelOverview";
+import { EngagementMetrics } from "./EngagementMetrics";
+import { CategoryBenchmark } from "./CategoryBenchmark";
+import { ResearchSummary } from "./ResearchSummary";
 import { BrandFitScore } from "./BrandFitScore";
 import { CollabIdeas } from "./CollabIdeas";
 import { VideoList } from "./VideoList";
+import { ComparisonDashboard } from "./ComparisonDashboard";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertTriangle } from "lucide-react";
 
@@ -34,13 +38,34 @@ export function AnalysisResults({ state }: AnalysisResultsProps) {
     );
   }
 
+  // 比較モード
+  if (state.mode === "compare" && state.comparisonResult) {
+    return (
+      <div id="analysis-results">
+        <ComparisonDashboard comparison={state.comparisonResult} />
+      </div>
+    );
+  }
+
+  // 単体モード
   if (!state.result) return null;
 
-  const { channel, videos, analysis, brandName } = state.result;
+  const { channel, videos, analysis, metrics, brandName, creatorResearch, researchMode } = state.result;
 
   return (
     <div id="analysis-results" className="space-y-6">
       <ChannelOverview channel={channel} />
+      {metrics && <EngagementMetrics metrics={metrics} />}
+      {analysis.categoryBenchmark && (
+        <CategoryBenchmark
+          benchmark={analysis.categoryBenchmark}
+          persona={analysis.audiencePersona}
+          similarCreators={analysis.similarCreators}
+        />
+      )}
+      {creatorResearch && (
+        <ResearchSummary creatorResearch={creatorResearch} researchMode={researchMode} />
+      )}
       <BrandFitScore analysis={analysis} brandName={brandName} />
       <CollabIdeas ideas={analysis.collabIdeas} />
       <VideoList videos={videos} />

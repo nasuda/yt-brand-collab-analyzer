@@ -110,6 +110,23 @@ export async function resolveChannel(input: string): Promise<{ channel: ChannelI
       });
       break;
 
+    case "customUrl": {
+      // /c/customname: forHandle で解決を試み、customUrl が一致する場合のみ採用
+      const handleAttempt = await ytFetch<YouTubeChannelResponse>("channels", {
+        part: "snippet,statistics,contentDetails",
+        forHandle: parsed.value,
+      });
+      const resolved = handleAttempt.items?.[0];
+      if (resolved) {
+        const resolvedCustom = (resolved.snippet.customUrl || "").replace(/^@/, "").toLowerCase();
+        if (resolvedCustom === parsed.value.toLowerCase()) {
+          channelData = handleAttempt;
+          break;
+        }
+      }
+      throw new Error(`/c/ 形式のURLからチャンネルを特定できませんでした。@ハンドル名またはチャンネルURLで再入力してください: ${parsed.value}`);
+    }
+
     case "username":
       channelData = await ytFetch<YouTubeChannelResponse>("channels", {
         part: "snippet,statistics,contentDetails",
@@ -184,7 +201,12 @@ function toVideoInfo(item: NonNullable<YouTubeVideosResponse["items"]>[number]):
   };
 }
 
-export async function getVideos(uploadsPlaylistId: string): Promise<VideoInfo[]> {
+export interface GetVideosResult {
+  videos: VideoInfo[];       // latest + popular（全体、UI・Gemini向け）
+  latestVideos: VideoInfo[]; // 最新投稿のみ（時系列指標向け）
+}
+
+export async function getVideos(uploadsPlaylistId: string): Promise<GetVideosResult> {
   // playlistItems を最大3ページ（150本）取得してクォータ節約（3単位 vs search.listの100単位）
   const allVideoIds: string[] = [];
   let pageToken: string | undefined;
@@ -206,7 +228,7 @@ export async function getVideos(uploadsPlaylistId: string): Promise<VideoInfo[]>
     if (!pageToken) break;
   }
 
-  if (allVideoIds.length === 0) return [];
+  if (allVideoIds.length === 0) return { videos: [], latestVideos: [] };
 
   // videos.list でバッチ取得（50件ずつ）
   const allVideos: VideoInfo[] = [];
@@ -221,21 +243,24 @@ export async function getVideos(uploadsPlaylistId: string): Promise<VideoInfo[]>
     }
   }
 
-  // 最新5本（allVideoIdsの順序=新しい順）
-  const latest5 = allVideos.slice(0, 5);
-  const latest5Ids = new Set(latest5.map((v) => v.id));
+  // 最新10本（allVideoIdsの順序=新しい順）
+  const latest = allVideos.slice(0, 10);
+  const latestIds = new Set(latest.map((v) => v.id));
 
-  // 残りから再生数上位5本（チャンネル全体150本の中から選定）
-  const remaining = allVideos.filter((v) => !latest5Ids.has(v.id));
+  // 残りから再生数上位10本（チャンネル全体150本の中から選定）
+  const remaining = allVideos.filter((v) => !latestIds.has(v.id));
   remaining.sort((a, b) => b.viewCount - a.viewCount);
-  const popular5 = remaining.slice(0, 5);
+  const popular = remaining.slice(0, 10);
 
-  return [...latest5, ...popular5];
+  return {
+    videos: [...latest, ...popular],
+    latestVideos: latest,
+  };
 }
 
 export async function getVideoComments(
   videoIds: string[],
-  perVideo: number = 30
+  perVideo: number = 10
 ): Promise<CommentInfo[]> {
   const results = await Promise.allSettled(
     videoIds.map(async (videoId) => {
