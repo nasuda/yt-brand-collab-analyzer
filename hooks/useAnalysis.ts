@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import { AnalysisState, AnalysisResult, ComparisonResult, ResearchMode } from "@/lib/types";
+import { AnalysisState, AnalysisResult, ComparisonResult, ComparisonError, ResearchMode } from "@/lib/types";
 
 const LOADING_STEPS: Record<ResearchMode, string[]> = {
   basic: [
@@ -223,11 +223,10 @@ export function useAnalysis() {
     const total = channels.length;
 
     // 進捗表示用タイマー
-    let currentChannel = 1;
     const progressTimer = setInterval(() => {
       setState((prev) => ({
         ...prev,
-        loadingStep: `チャンネル ${Math.min(currentChannel, total)}/${total} を分析中...`,
+        loadingStep: `${total}チャンネルを分析中...`,
       }));
     }, 5000);
 
@@ -254,6 +253,7 @@ export function useAnalysis() {
       setComparisonSuccess({
         results: data.results as unknown as AnalysisResult[],
         comparisonSummary: (data.comparisonSummary as string) || "",
+        errors: (data.errors as ComparisonError[] | undefined) || undefined,
       });
     } catch {
       clearInterval(progressTimer);

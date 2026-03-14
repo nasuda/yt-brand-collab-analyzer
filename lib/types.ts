@@ -151,9 +151,15 @@ export interface AnalysisResult {
   creatorResearch?: string;
 }
 
+export interface ComparisonError {
+  channel: string;
+  error: string;
+}
+
 export interface ComparisonResult {
   results: AnalysisResult[];
   comparisonSummary: string;
+  errors?: ComparisonError[];
 }
 
 export type AnalysisStatus = "idle" | "loading" | "success" | "error";

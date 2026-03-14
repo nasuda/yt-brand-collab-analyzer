@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveChannel, getVideos, getVideoComments } from "@/lib/youtube";
-import { analyzeBrandFit, performResearch, sanitizeResearch } from "@/lib/gemini";
+import { analyzeBrandFit, performResearch } from "@/lib/gemini";
 import { computeMetrics } from "@/lib/metrics";
 import { GoogleGenAI } from "@google/genai";
 import type { AnalysisResult, ResearchMode } from "@/lib/types";

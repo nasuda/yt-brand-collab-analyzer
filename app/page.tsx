@@ -27,16 +27,23 @@ export default function Home() {
       reportContainerRef.current = container;
 
       const root = createRoot(container);
-      root.render(<PrintableReport result={result} settings={settings} />);
+      try {
+        root.render(<PrintableReport result={result} settings={settings} />);
 
-      await new Promise((resolve) => setTimeout(resolve, 100));
+        // 描画完了を待つ: requestAnimationFrame 2回でブラウザの描画サイクルを確実に通す
+        await new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve());
+          });
+        });
 
-      const channelName = result.channel.title || "analysis";
-      const brand = result.brandName || "brand";
-      await exportReport(container, `${channelName}_x_${brand}_レポート`);
-
-      root.unmount();
-      setShowReportModal(false);
+        const channelName = result.channel.title || "analysis";
+        const brand = result.brandName || "brand";
+        await exportReport(container, `${channelName}_x_${brand}_レポート`);
+      } finally {
+        root.unmount();
+        setShowReportModal(false);
+      }
     },
     [result, exportReport]
   );

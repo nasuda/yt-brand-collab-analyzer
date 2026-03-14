@@ -21,11 +21,15 @@ export function computeMetrics(
   const commentRate =
     totalViews > 0 ? (totalComments / totalViews) * 100 : 0;
 
-  // 投稿頻度: 投稿日でソートし、隣接する動画間の日数差の中央値から算出
-  const postingFrequency = calcPostingFrequency(videos);
+  // 時系列指標は重複除去＋投稿日順ソートした動画で算出
+  // （getVideos()は最新動画と人気動画を混在させるため、同じ動画が重複する可能性がある）
+  const uniqueVideos = deduplicateByDate(videos);
 
-  // viewTrend: 最新動画群 vs 人気動画群の再生数中央値比較
-  const viewTrend = calcViewTrend(videos);
+  // 投稿頻度: 投稿日でソートし、隣接する動画間の日数差の中央値から算出
+  const postingFrequency = calcPostingFrequency(uniqueVideos);
+
+  // viewTrend: 最新半分 vs 古い半分の再生数中央値比較
+  const viewTrend = calcViewTrend(uniqueVideos);
 
   // topTags: 全動画のタグ出現回数上位5つ
   const topTags = calcTopTags(videos, 5);
@@ -40,6 +44,21 @@ export function computeMetrics(
     viewTrend,
     topTags,
   };
+}
+
+/** ID重複を除去し、投稿日が新しい順にソートして返す */
+function deduplicateByDate(videos: VideoInfo[]): VideoInfo[] {
+  const seen = new Set<string>();
+  const unique: VideoInfo[] = [];
+  for (const v of videos) {
+    if (!seen.has(v.id)) {
+      seen.add(v.id);
+      unique.push(v);
+    }
+  }
+  return unique.sort(
+    (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+  );
 }
 
 function round(value: number, decimals: number): number {

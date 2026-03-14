@@ -59,8 +59,11 @@ export function AnalysisForm({ onSubmit, onCompare, isLoading }: AnalysisFormPro
 
     if (isCompareMode) {
       const validChannels = compareChannels.filter((c) => c.trim());
-      if (validChannels.length < 2 || !brandName.trim()) return;
-      onCompare(validChannels, brandName.trim(), brandDescription.trim() || undefined, researchMode);
+      // 重複チェック（正規化して比較）
+      const normalized = validChannels.map((c) => c.trim().toLowerCase());
+      const uniqueChannels = validChannels.filter((_, i) => normalized.indexOf(normalized[i]) === i);
+      if (uniqueChannels.length < 2 || !brandName.trim()) return;
+      onCompare(uniqueChannels, brandName.trim(), brandDescription.trim() || undefined, researchMode);
     } else {
       if (!channelInput.trim() || !brandName.trim()) return;
       if (researchMode === "custom-research" && !customResearch.trim()) return;

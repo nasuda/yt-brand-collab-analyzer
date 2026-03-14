@@ -10,6 +10,7 @@ import {
   ChevronUp,
   Trophy,
   Shield,
+  AlertTriangle,
 } from "lucide-react";
 import { ChannelOverview } from "./ChannelOverview";
 import { EngagementMetrics } from "./EngagementMetrics";
@@ -79,6 +80,25 @@ export function ComparisonDashboard({ comparison }: ComparisonDashboardProps) {
         </Card>
       )}
 
+      {/* 部分失敗の警告 */}
+      {comparison.errors && comparison.errors.length > 0 && (
+        <Card className="border-yellow-300 dark:border-yellow-700">
+          <CardContent className="py-4">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-yellow-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium">一部のチャンネルの分析に失敗しました</p>
+                {comparison.errors.map((err, i) => (
+                  <p key={i} className="text-xs text-muted-foreground">
+                    {err.channel}: {err.error}
+                  </p>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* 比較テーブル */}
       <Card>
         <CardHeader>
@@ -101,7 +121,7 @@ export function ComparisonDashboard({ comparison }: ComparisonDashboardProps) {
             <tbody>
               {sorted.map((result, index) => (
                 <ComparisonRow
-                  key={result.channel.id}
+                  key={`${result.channel.id}-${index}`}
                   result={result}
                   rank={index + 1}
                   isExpanded={expandedChannel === result.channel.id}
