@@ -201,7 +201,12 @@ function toVideoInfo(item: NonNullable<YouTubeVideosResponse["items"]>[number]):
   };
 }
 
-export async function getVideos(uploadsPlaylistId: string): Promise<VideoInfo[]> {
+export interface GetVideosResult {
+  videos: VideoInfo[];       // latest + popular（全体、UI・Gemini向け）
+  latestVideos: VideoInfo[]; // 最新投稿のみ（時系列指標向け）
+}
+
+export async function getVideos(uploadsPlaylistId: string): Promise<GetVideosResult> {
   // playlistItems を最大3ページ（150本）取得してクォータ節約（3単位 vs search.listの100単位）
   const allVideoIds: string[] = [];
   let pageToken: string | undefined;
@@ -223,7 +228,7 @@ export async function getVideos(uploadsPlaylistId: string): Promise<VideoInfo[]>
     if (!pageToken) break;
   }
 
-  if (allVideoIds.length === 0) return [];
+  if (allVideoIds.length === 0) return { videos: [], latestVideos: [] };
 
   // videos.list でバッチ取得（50件ずつ）
   const allVideos: VideoInfo[] = [];
@@ -247,7 +252,10 @@ export async function getVideos(uploadsPlaylistId: string): Promise<VideoInfo[]>
   remaining.sort((a, b) => b.viewCount - a.viewCount);
   const popular = remaining.slice(0, 10);
 
-  return [...latest, ...popular];
+  return {
+    videos: [...latest, ...popular],
+    latestVideos: latest,
+  };
 }
 
 export async function getVideoComments(

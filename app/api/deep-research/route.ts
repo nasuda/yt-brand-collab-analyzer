@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateAnalysisRequest } from "@/lib/validators";
 import { resolveChannel, getVideos, getVideoComments } from "@/lib/youtube";
+import { computeMetrics } from "@/lib/metrics";
 import { startDeepResearch, pollDeepResearch, performResearch, analyzeBrandFit, sanitizeResearch } from "@/lib/gemini";
 
 // POST: Deep Research を開始し、interactionId + YouTube データを返す
@@ -35,8 +36,9 @@ export async function POST(request: NextRequest) {
         : undefined;
 
       const { channel, uploadsPlaylistId } = await resolveChannel(channelInput);
-      const videos = await getVideos(uploadsPlaylistId);
+      const { videos, latestVideos } = await getVideos(uploadsPlaylistId);
       const comments = await getVideoComments(videos.map((v) => v.id));
+      const metrics = computeMetrics(channel, videos, latestVideos);
 
       const analysis = await analyzeBrandFit(
         channel,
@@ -51,6 +53,7 @@ export async function POST(request: NextRequest) {
         channel,
         videos,
         analysis,
+        metrics,
         brandName,
         researchMode: "deep-research",
         creatorResearch: sanitizedResearch,

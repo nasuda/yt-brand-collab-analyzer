@@ -2,7 +2,8 @@ import { ChannelInfo, VideoInfo, ChannelMetrics } from "./types";
 
 export function computeMetrics(
   channel: ChannelInfo,
-  videos: VideoInfo[]
+  videos: VideoInfo[],
+  latestVideos?: VideoInfo[]
 ): ChannelMetrics {
   const totalViews = videos.reduce((sum, v) => sum + v.viewCount, 0);
   const totalLikes = videos.reduce((sum, v) => sum + v.likeCount, 0);
@@ -21,15 +22,14 @@ export function computeMetrics(
   const commentRate =
     totalViews > 0 ? (totalComments / totalViews) * 100 : 0;
 
-  // 時系列指標は重複除去＋投稿日順ソートした動画で算出
-  // （getVideos()は最新動画と人気動画を混在させるため、同じ動画が重複する可能性がある）
-  const uniqueVideos = deduplicateByDate(videos);
+  // 時系列指標は最新投稿のみから算出（人気動画が混ざるとトレンド・頻度が歪むため）
+  const timeSeriesVideos = deduplicateByDate(latestVideos || videos);
 
   // 投稿頻度: 投稿日でソートし、隣接する動画間の日数差の中央値から算出
-  const postingFrequency = calcPostingFrequency(uniqueVideos);
+  const postingFrequency = calcPostingFrequency(timeSeriesVideos);
 
   // viewTrend: 最新半分 vs 古い半分の再生数中央値比較
-  const viewTrend = calcViewTrend(uniqueVideos);
+  const viewTrend = calcViewTrend(timeSeriesVideos);
 
   // topTags: 全動画のタグ出現回数上位5つ
   const topTags = calcTopTags(videos, 5);

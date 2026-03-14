@@ -26,15 +26,16 @@ async function analyzeOneChannel(
 
   const { channel, uploadsPlaylistId } = await resolveChannel(channelInput);
 
-  const [videos, autoResearch] = await Promise.all([
+  const [videosResult, autoResearch] = await Promise.all([
     getVideos(uploadsPlaylistId),
     effectiveMode === "custom-research"
       ? Promise.resolve(undefined)
       : performResearch(effectiveMode, channel, brandName),
   ]);
 
+  const { videos, latestVideos } = videosResult;
   const finalResearch = autoResearch;
-  const metrics = computeMetrics(channel, videos);
+  const metrics = computeMetrics(channel, videos, latestVideos);
   const comments = await getVideoComments(videos.map((v) => v.id));
 
   const analysis = await analyzeBrandFit(
@@ -104,8 +105,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // researchModeバリデーション（比較モードではbasic/searchのみ許可）
+    const allowedModes: ResearchMode[] = ["basic", "search"];
+    const researchMode = allowedModes.includes(body.researchMode)
+      ? body.researchMode
+      : "basic";
+
     const results: AnalysisResult[] = [];
     const errors: { channel: string; error: string }[] = [];
+    const seenChannelIds = new Set<string>();
 
     // 順次分析（Geminiレート制限考慮）
     for (const channelInput of body.channels) {
@@ -114,8 +122,19 @@ export async function POST(request: NextRequest) {
           channelInput.trim(),
           body.brandName.trim(),
           body.brandDescription?.trim(),
-          body.researchMode || "basic"
+          researchMode
         );
+
+        // resolve後のchannel IDで重複排除
+        if (seenChannelIds.has(result.channel.id)) {
+          errors.push({
+            channel: channelInput,
+            error: `「${result.channel.title}」は既に分析済みです（重複チャンネル）`,
+          });
+          continue;
+        }
+        seenChannelIds.add(result.channel.id);
+
         results.push(result);
       } catch (err) {
         errors.push({
@@ -125,9 +144,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (results.length === 0) {
+    // 比較には最低2件必要
+    if (results.length < 2) {
       return NextResponse.json(
-        { error: "全てのチャンネルの分析に失敗しました", errors },
+        {
+          error: results.length === 0
+            ? "全てのチャンネルの分析に失敗しました"
+            : "比較には2チャンネル以上の分析成功が必要です",
+          errors,
+        },
         { status: 500 }
       );
     }

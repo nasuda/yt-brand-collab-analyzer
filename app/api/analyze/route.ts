@@ -23,12 +23,14 @@ export async function POST(request: NextRequest) {
 
     // Step 2: YouTube data + Creator research を並行実行
     // custom-research はユーザー提供テキストを使うため performResearch を呼ばない
-    const [videos, autoResearch] = await Promise.all([
+    const [videosResult, autoResearch] = await Promise.all([
       getVideos(uploadsPlaylistId),
       effectiveMode === "custom-research"
         ? Promise.resolve(undefined)
         : performResearch(effectiveMode, channel, brandName),
     ]);
+
+    const { videos, latestVideos } = videosResult;
 
     // custom-research: ユーザー提供テキストをサニタイズして使用
     const finalResearch = effectiveMode === "custom-research" && userResearch
@@ -38,8 +40,8 @@ export async function POST(request: NextRequest) {
     // Step 3: Get comments
     const comments = await getVideoComments(videos.map((v) => v.id));
 
-    // Step 4: Compute metrics
-    const metrics = computeMetrics(channel, videos);
+    // Step 4: Compute metrics（時系列指標にはlatestVideosのみ使用）
+    const metrics = computeMetrics(channel, videos, latestVideos);
 
     // Step 5: Analyze with Gemini
     const analysis = await analyzeBrandFit(
