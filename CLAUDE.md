@@ -56,6 +56,41 @@ Single API route (`/api/analyze`) keeps API keys server-side. The client makes o
 - Components use `"use client"` directive where React hooks are needed.
 - Path alias: `@/*` maps to project root.
 
+## Development Workflow
+
+Claude Code（開発）→ PR → Codex（レビュー）→ マージ の非同期サイクルで開発。
+
+### セッション開始時（必須）
+1. `gh pr list` で前回PRの状態を確認
+   - **Approved** → `gh pr merge --squash` → `git checkout main && git pull`
+   - **Changes Requested** → 該当ブランチに戻ってフィードバック対応 → push
+   - **Review待ち/PRなし** → `git checkout main && git pull`
+2. mainから新ブランチを切る: `git checkout -b feat/xxx`
+
+### セッション終了時（必須）
+1. `npm run build` で型エラーなしを確認
+2. コミット → push → PR作成
+3. `git checkout main`（ローカルのmainを常にクリーンに保つ）
+
+### PR作成ルール（Codexレビュー最適化）
+```
+タイトル: feat/fix/refactor: 日本語で簡潔に（70文字以内）
+Body:
+  ## Summary — 何を・なぜ（箇条書き）
+  ## 変更ファイル — 新規/変更を区分
+  ## Test plan — 検証チェックリスト
+```
+
+### ブランチ命名
+- `feat/xxx` — 新機能
+- `fix/xxx` — バグ修正
+- `refactor/xxx` — リファクタリング
+
+### 原則
+- mainへの直接push禁止（必ずPR経由）
+- 1PR = 1テーマ（レビューしやすい粒度）
+- PRはセッション間の引き継ぎ書を兼ねる
+
 ## Environment Variables (.env.local)
 
 - `YOUTUBE_API_KEY` — YouTube Data API v3 key (Google Cloud Console)
