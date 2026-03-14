@@ -1,4 +1,4 @@
-export type ResearchMode = "basic" | "search" | "deep-research";
+export type ResearchMode = "basic" | "search" | "deep-research" | "custom-research";
 
 export interface AnalysisRequest {
   channelInput: string;
@@ -67,6 +67,20 @@ export interface BrandSafety {
   recommendation: "推奨" | "条件付き推奨" | "非推奨";
 }
 
+export interface PostingInstruction {
+  contentDirection: string;        // コンテンツの方向性・トーン・スタイル指示
+  descriptionBoxSuggestion: string; // 概要欄の推奨内容
+  keyMessages: string[];           // 伝えるべきキーメッセージ（3〜5個）
+  toneAndManner: string;           // トーン&マナー・NG表現等
+}
+
+export interface DistributionStrategy {
+  adProduct: string;               // 推奨Google広告プロダクト
+  mixStrategy: string;             // 単独 or ブランド広告とのミックス方針
+  audienceTargeting: string;       // ターゲティング推奨
+  budgetAllocation: string;        // 予算配分の方向性
+}
+
 export interface CollabIdea {
   title: string;
   format: string;
@@ -76,6 +90,8 @@ export interface CollabIdea {
   feasibility: "低" | "中" | "高";
   targetKPI: string;
   brandSafetyNote: string;
+  postingInstruction: PostingInstruction;
+  distributionStrategy: DistributionStrategy;
 }
 
 export interface BrandFitAnalysis {

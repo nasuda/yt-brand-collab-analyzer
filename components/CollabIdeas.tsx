@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { CollabIdea } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Lightbulb, Sparkles, Target, Shield, Zap } from "lucide-react";
+import { Lightbulb, Sparkles, Target, Shield, Zap, FileEdit, Megaphone, ChevronDown, ChevronRight } from "lucide-react";
 
 interface CollabIdeasProps {
   ideas: CollabIdea[];
@@ -18,7 +19,36 @@ function getFeasibilityStyle(f: string) {
   }
 }
 
+function hasPostingInstruction(idea: CollabIdea): boolean {
+  const p = idea.postingInstruction;
+  return !!(p && (p.contentDirection || p.descriptionBoxSuggestion || p.keyMessages.length > 0 || p.toneAndManner));
+}
+
+function hasDistributionStrategy(idea: CollabIdea): boolean {
+  const d = idea.distributionStrategy;
+  return !!(d && (d.adProduct || d.mixStrategy || d.audienceTargeting || d.budgetAllocation));
+}
+
 export function CollabIdeas({ ideas }: CollabIdeasProps) {
+  const [openPostingIds, setOpenPostingIds] = useState<Set<number>>(new Set());
+  const [openDistributionIds, setOpenDistributionIds] = useState<Set<number>>(new Set());
+
+  const togglePosting = (i: number) => {
+    setOpenPostingIds(prev => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i); else next.add(i);
+      return next;
+    });
+  };
+
+  const toggleDistribution = (i: number) => {
+    setOpenDistributionIds(prev => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i); else next.add(i);
+      return next;
+    });
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -67,6 +97,96 @@ export function CollabIdeas({ ideas }: CollabIdeasProps) {
                 <div className="flex items-start gap-1.5 text-sm">
                   <Shield className="h-3 w-3 text-yellow-500 mt-0.5 shrink-0" />
                   <span><span className="text-yellow-500 font-medium">安全性:</span> <span className="text-muted-foreground">{idea.brandSafetyNote}</span></span>
+                </div>
+              )}
+
+              {/* 投稿指示書アコーディオン */}
+              {hasPostingInstruction(idea) && (
+                <div className="border rounded-md overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => togglePosting(i)}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 transition-colors"
+                  >
+                    {openPostingIds.has(i) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    <FileEdit className="h-4 w-4" />
+                    投稿指示書
+                  </button>
+                  {openPostingIds.has(i) && (
+                    <div className="px-3 py-3 space-y-3 text-sm border-t">
+                      {idea.postingInstruction.contentDirection && (
+                        <div>
+                          <p className="font-medium text-emerald-700 dark:text-emerald-400 mb-1">コンテンツの方向性</p>
+                          <p className="text-muted-foreground">{idea.postingInstruction.contentDirection}</p>
+                        </div>
+                      )}
+                      {idea.postingInstruction.keyMessages.length > 0 && (
+                        <div>
+                          <p className="font-medium text-emerald-700 dark:text-emerald-400 mb-1">キーメッセージ</p>
+                          <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
+                            {idea.postingInstruction.keyMessages.map((msg, j) => (
+                              <li key={j}>{msg}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {idea.postingInstruction.toneAndManner && (
+                        <div>
+                          <p className="font-medium text-emerald-700 dark:text-emerald-400 mb-1">トーン&マナー</p>
+                          <p className="text-muted-foreground">{idea.postingInstruction.toneAndManner}</p>
+                        </div>
+                      )}
+                      {idea.postingInstruction.descriptionBoxSuggestion && (
+                        <div>
+                          <p className="font-medium text-emerald-700 dark:text-emerald-400 mb-1">概要欄テンプレート</p>
+                          <pre className="text-muted-foreground whitespace-pre-wrap bg-muted/50 rounded p-2 text-xs">{idea.postingInstruction.descriptionBoxSuggestion}</pre>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 配信戦略アコーディオン */}
+              {hasDistributionStrategy(idea) && (
+                <div className="border rounded-md overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => toggleDistribution(i)}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-950/50 transition-colors"
+                  >
+                    {openDistributionIds.has(i) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    <Megaphone className="h-4 w-4" />
+                    配信戦略
+                  </button>
+                  {openDistributionIds.has(i) && (
+                    <div className="px-3 py-3 space-y-3 text-sm border-t">
+                      {idea.distributionStrategy.adProduct && (
+                        <div>
+                          <p className="font-medium text-indigo-700 dark:text-indigo-400 mb-1">推奨広告プロダクト</p>
+                          <p className="text-muted-foreground">{idea.distributionStrategy.adProduct}</p>
+                        </div>
+                      )}
+                      {idea.distributionStrategy.mixStrategy && (
+                        <div>
+                          <p className="font-medium text-indigo-700 dark:text-indigo-400 mb-1">ミックス戦略</p>
+                          <p className="text-muted-foreground">{idea.distributionStrategy.mixStrategy}</p>
+                        </div>
+                      )}
+                      {idea.distributionStrategy.audienceTargeting && (
+                        <div>
+                          <p className="font-medium text-indigo-700 dark:text-indigo-400 mb-1">オーディエンスターゲティング</p>
+                          <p className="text-muted-foreground">{idea.distributionStrategy.audienceTargeting}</p>
+                        </div>
+                      )}
+                      {idea.distributionStrategy.budgetAllocation && (
+                        <div>
+                          <p className="font-medium text-indigo-700 dark:text-indigo-400 mb-1">予算配分</p>
+                          <p className="text-muted-foreground">{idea.distributionStrategy.budgetAllocation}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
