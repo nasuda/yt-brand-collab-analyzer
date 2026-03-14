@@ -16,15 +16,20 @@ interface CompareRequest {
   researchMode: ResearchMode;
 }
 
-async function analyzeOneChannel(
-  channelInput: string,
+interface ResolvedChannel {
+  channelInput: string;
+  channel: import("@/lib/types").ChannelInfo;
+  uploadsPlaylistId: string;
+}
+
+async function analyzeResolvedChannel(
+  resolved: ResolvedChannel,
   brandName: string,
   brandDescription: string | undefined,
   researchMode: ResearchMode
 ): Promise<AnalysisResult> {
   const effectiveMode = researchMode === "deep-research" ? "basic" : researchMode;
-
-  const { channel, uploadsPlaylistId } = await resolveChannel(channelInput);
+  const { channel, uploadsPlaylistId } = resolved;
 
   const [videosResult, autoResearch] = await Promise.all([
     getVideos(uploadsPlaylistId),
@@ -111,34 +116,48 @@ export async function POST(request: NextRequest) {
       ? body.researchMode
       : "basic";
 
-    const results: AnalysisResult[] = [];
     const errors: { channel: string; error: string }[] = [];
+
+    // Step 1: 全チャンネルを先にresolveし、channel IDベースで重複排除（APIコスト削減）
+    const resolvedChannels: ResolvedChannel[] = [];
     const seenChannelIds = new Set<string>();
 
-    // 順次分析（Geminiレート制限考慮）
     for (const channelInput of body.channels) {
       try {
-        const result = await analyzeOneChannel(
-          channelInput.trim(),
+        const { channel, uploadsPlaylistId } = await resolveChannel(channelInput.trim());
+
+        if (seenChannelIds.has(channel.id)) {
+          errors.push({
+            channel: channelInput,
+            error: `「${channel.title}」は既に分析対象に含まれています（重複チャンネル）`,
+          });
+          continue;
+        }
+        seenChannelIds.add(channel.id);
+        resolvedChannels.push({ channelInput, channel, uploadsPlaylistId });
+      } catch (err) {
+        errors.push({
+          channel: channelInput,
+          error: err instanceof Error ? err.message : "チャンネルの解決に失敗しました",
+        });
+      }
+    }
+
+    // Step 2: resolve済みチャンネルを順次分析（Geminiレート制限考慮）
+    const results: AnalysisResult[] = [];
+
+    for (const resolved of resolvedChannels) {
+      try {
+        const result = await analyzeResolvedChannel(
+          resolved,
           body.brandName.trim(),
           body.brandDescription?.trim(),
           researchMode
         );
-
-        // resolve後のchannel IDで重複排除
-        if (seenChannelIds.has(result.channel.id)) {
-          errors.push({
-            channel: channelInput,
-            error: `「${result.channel.title}」は既に分析済みです（重複チャンネル）`,
-          });
-          continue;
-        }
-        seenChannelIds.add(result.channel.id);
-
         results.push(result);
       } catch (err) {
         errors.push({
-          channel: channelInput,
+          channel: resolved.channelInput,
           error: err instanceof Error ? err.message : "分析に失敗しました",
         });
       }

@@ -10,7 +10,7 @@ import type { ReportSettings } from "./PrintableReport";
 interface ReportSettingsModalProps {
   open: boolean;
   onClose: () => void;
-  onGenerate: (settings: ReportSettings) => void;
+  onGenerate: (settings: ReportSettings) => Promise<void>;
   generating: boolean;
 }
 
@@ -35,6 +35,7 @@ export function ReportSettingsModal({
     Object.fromEntries(SECTION_OPTIONS.map((s) => [s.key, true]))
   );
   const [collabIdeasCount, setCollabIdeasCount] = useState<"top3" | "all">("top3");
+  const [error, setError] = useState<string | null>(null);
 
   if (!open) return null;
 
@@ -42,8 +43,15 @@ export function ReportSettingsModal({
     setSections((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const handleGenerate = () => {
-    onGenerate({ authorName, sections, collabIdeasCount });
+  const hasSelectedSections = Object.values(sections).some(Boolean);
+
+  const handleGenerate = async () => {
+    setError(null);
+    try {
+      await onGenerate({ authorName, sections, collabIdeasCount });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "レポート生成に失敗しました");
+    }
   };
 
   return (
@@ -116,13 +124,21 @@ export function ReportSettingsModal({
           </div>
         </div>
 
-        <div className="p-4 border-t flex gap-2 justify-end">
-          <Button variant="outline" onClick={onClose} disabled={generating}>
-            キャンセル
-          </Button>
-          <Button onClick={handleGenerate} disabled={generating}>
-            {generating ? "レポート生成中..." : "レポート生成"}
-          </Button>
+        <div className="p-4 border-t space-y-2">
+          {error && (
+            <p className="text-sm text-destructive">{error}</p>
+          )}
+          {!hasSelectedSections && (
+            <p className="text-sm text-muted-foreground">セクションを1つ以上選択してください</p>
+          )}
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={onClose} disabled={generating}>
+              キャンセル
+            </Button>
+            <Button onClick={handleGenerate} disabled={generating || !hasSelectedSections}>
+              {generating ? "レポート生成中..." : "レポート生成"}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
