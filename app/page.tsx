@@ -40,9 +40,14 @@ export default function Home() {
         const channelName = result.channel.title || "analysis";
         const brand = result.brandName || "brand";
         await exportReport(container, `${channelName}_x_${brand}_レポート`);
-      } finally {
+
+        // 成功時のみモーダルを閉じる
         root.unmount();
         setShowReportModal(false);
+      } catch (err) {
+        // 失敗時はモーダルを開いたままにしてエラー表示を子に任せる
+        root.unmount();
+        throw err;
       }
     },
     [result, exportReport]
