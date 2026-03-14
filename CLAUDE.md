@@ -58,19 +58,31 @@ Single API route (`/api/analyze`) keeps API keys server-side. The client makes o
 
 ## Development Workflow
 
-Claude Code（開発）→ PR → Codex（レビュー）→ マージ の非同期サイクルで開発。
+Claude Code（開発）→ PR作成 → Codex（コメントレビュー）→ 修正 → マージ の非同期サイクルで開発。
+Codexのレビューは GitHub PR 上のコメントで行う（同一アカウントのため Approve/Request Changes は使わない）。
 
 ### セッション開始時（必須）
-1. `gh pr list` で前回PRの状態を確認
-   - **Approved** → `gh pr merge --squash` → `git checkout main && git pull`
-   - **Changes Requested** → 該当ブランチに戻ってフィードバック対応 → push
-   - **Review待ち/PRなし** → `git checkout main && git pull`
-2. mainから新ブランチを切る: `git checkout -b feat/xxx`
+1. `gh pr list` で開いているPRを確認
+2. PRがある場合 → `gh pr view <番号> --comments` でCodexのレビューコメントを確認
+   - **指摘あり** → 該当ブランチに戻って修正 → push → Codexに再レビュー依頼
+   - **指摘なし / 対応済み** → `gh pr merge <番号> --squash` → `git checkout main && git pull`
+3. PRがない場合 → `git checkout main && git pull`
+4. mainから新ブランチを切る: `git checkout -b feat/xxx`
 
 ### セッション終了時（必須）
 1. `npm run build` で型エラーなしを確認
 2. コミット → push → PR作成
 3. `git checkout main`（ローカルのmainを常にクリーンに保つ）
+4. Codexに PR URL を渡してコメントレビューを依頼
+
+### Codexへのレビュー依頼テンプレート
+```
+このPRをレビューしてください。
+指摘事項はPRにコメントとして残してください。
+（Approve/Request Changesは使わず、コメントのみでOK）
+問題なければ「LGTM」とコメントしてください。
+<PR URL>
+```
 
 ### PR作成ルール（Codexレビュー最適化）
 ```
