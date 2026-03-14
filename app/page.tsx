@@ -1,15 +1,47 @@
 "use client";
 
+import { useRef, useState, useCallback } from "react";
+import { createRoot } from "react-dom/client";
 import { useAnalysis } from "@/hooks/useAnalysis";
 import { useExportPDF } from "@/hooks/useExportPDF";
 import { AnalysisForm } from "@/components/AnalysisForm";
 import { AnalysisResults } from "@/components/AnalysisResults";
+import { ReportSettingsModal } from "@/components/ReportSettingsModal";
+import { PrintableReport } from "@/components/PrintableReport";
+import type { ReportSettings } from "@/components/PrintableReport";
 import { Button } from "@/components/ui/button";
-import { RotateCcw, FileDown } from "lucide-react";
+import { RotateCcw, FileText } from "lucide-react";
 
 export default function Home() {
-  const { status, result, error, loadingStep, analyze, reset } = useAnalysis();
-  const { exportPDF, exporting } = useExportPDF();
+  const { status, result, comparisonResult, error, loadingStep, mode, analyze, compare, reset } =
+    useAnalysis();
+  const { exportReport, exporting } = useExportPDF();
+  const [showReportModal, setShowReportModal] = useState(false);
+  const reportContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const handleGenerateReport = useCallback(
+    async (settings: ReportSettings) => {
+      if (!result) return;
+
+      const container = document.createElement("div");
+      reportContainerRef.current = container;
+
+      const root = createRoot(container);
+      root.render(<PrintableReport result={result} settings={settings} />);
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const channelName = result.channel.title || "analysis";
+      const brand = result.brandName || "brand";
+      await exportReport(container, `${channelName}_x_${brand}_レポート`);
+
+      root.unmount();
+      setShowReportModal(false);
+    },
+    [result, exportReport]
+  );
+
+  const canExportReport = status === "success" && mode === "single" && result;
 
   return (
     <main className="min-h-screen">
@@ -27,24 +59,23 @@ export default function Home() {
           {status !== "success" && (
             <AnalysisForm
               onSubmit={analyze}
+              onCompare={compare}
               isLoading={status === "loading"}
             />
           )}
 
           {status === "success" && (
             <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  const channelName = result?.channel.title || "analysis";
-                  const brand = result?.brandName || "brand";
-                  exportPDF("analysis-results", `${channelName}_x_${brand}`);
-                }}
-                disabled={exporting}
-              >
-                <FileDown className="h-4 w-4" />
-                {exporting ? "PDF生成中..." : "PDF出力"}
-              </Button>
+              {canExportReport && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowReportModal(true)}
+                  disabled={exporting}
+                >
+                  <FileText className="h-4 w-4" />
+                  {exporting ? "レポート生成中..." : "レポート出力"}
+                </Button>
+              )}
               <Button variant="outline" onClick={reset}>
                 <RotateCcw className="h-4 w-4" />
                 新しい分析
@@ -52,9 +83,18 @@ export default function Home() {
             </div>
           )}
 
-          <AnalysisResults state={{ status, result, error, loadingStep }} />
+          <AnalysisResults
+            state={{ status, result, comparisonResult, error, loadingStep, mode }}
+          />
         </div>
       </div>
+
+      <ReportSettingsModal
+        open={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        onGenerate={handleGenerateReport}
+        generating={exporting}
+      />
     </main>
   );
 }

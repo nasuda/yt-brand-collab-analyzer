@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
         analysis,
         brandName,
         researchMode: "deep-research",
-        creatorResearch,
+        creatorResearch: sanitizedResearch,
       });
     }
 

@@ -6,6 +6,16 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { CheckCircle, AlertTriangle, Shield, ExternalLink } from "lucide-react";
 
+/** http/https のみ許可（多層防御: サーバー側でもチェック済み） */
+function isSafeUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 interface BrandFitScoreProps {
   analysis: BrandFitAnalysis;
   brandName: string;
@@ -55,7 +65,7 @@ function SourceList({ sources }: { sources: RiskSource[] }) {
   return (
     <div className="flex flex-wrap gap-1.5 mt-1">
       {sources.map((src, i) =>
-        src.url ? (
+        src.url && isSafeUrl(src.url) ? (
           <a
             key={i}
             href={src.url}

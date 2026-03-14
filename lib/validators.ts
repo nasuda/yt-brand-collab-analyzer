@@ -1,4 +1,4 @@
-export type ChannelInputType = "handle" | "channelId" | "username" | "text";
+export type ChannelInputType = "handle" | "channelId" | "customUrl" | "username" | "text";
 
 export interface ParsedChannelInput {
   type: ChannelInputType;
@@ -42,10 +42,10 @@ export function parseChannelInput(input: string): ParsedChannelInput {
         return { type: "handle", value: `@${handleMatch[1]}` };
       }
 
-      // /c/customname → handle として解決（customUrlはhandleと同等）
+      // /c/customname → customUrl として解決（forHandle試行→searchフォールバック）
       const customMatch = path.match(/\/c\/([\w.-]+)/);
       if (customMatch) {
-        return { type: "handle", value: `@${customMatch[1]}` };
+        return { type: "customUrl", value: customMatch[1] };
       }
 
       // /user/username → forUsername API で解決（旧式、handleとは別）
@@ -64,18 +64,19 @@ export function parseChannelInput(input: string): ParsedChannelInput {
 
 import type { ResearchMode } from "./types";
 
-const VALID_MODES: ResearchMode[] = ["basic", "search", "deep-research"];
+const BRAND_DESCRIPTION_MAX_LENGTH = 5000;
+const VALID_MODES: ResearchMode[] = ["basic", "search", "deep-research", "custom-research"];
 
 export function validateAnalysisRequest(body: unknown): {
   valid: boolean;
   error?: string;
-  data?: { channelInput: string; brandName: string; brandDescription?: string; researchMode: ResearchMode };
+  data?: { channelInput: string; brandName: string; brandDescription?: string; researchMode: ResearchMode; creatorResearch?: string };
 } {
   if (!body || typeof body !== "object") {
     return { valid: false, error: "リクエストボディが不正です" };
   }
 
-  const { channelInput, brandName, brandDescription, researchMode } = body as Record<
+  const { channelInput, brandName, brandDescription, researchMode, creatorResearch } = body as Record<
     string,
     unknown
   >;
@@ -88,9 +89,19 @@ export function validateAnalysisRequest(body: unknown): {
     return { valid: false, error: "ブランド名は必須です" };
   }
 
+  if (typeof brandDescription === "string" && brandDescription.length > BRAND_DESCRIPTION_MAX_LENGTH) {
+    return { valid: false, error: `ブランド説明は${BRAND_DESCRIPTION_MAX_LENGTH}文字以内にしてください` };
+  }
+
   const mode = (typeof researchMode === "string" && VALID_MODES.includes(researchMode as ResearchMode))
     ? researchMode as ResearchMode
     : "basic";
+
+  if (mode === "custom-research") {
+    if (!creatorResearch || typeof creatorResearch !== "string" || !creatorResearch.trim()) {
+      return { valid: false, error: "カスタムリサーチモードではリサーチレポートの入力が必須です" };
+    }
+  }
 
   return {
     valid: true,
@@ -100,6 +111,10 @@ export function validateAnalysisRequest(body: unknown): {
       brandDescription:
         typeof brandDescription === "string" ? brandDescription.trim() || undefined : undefined,
       researchMode: mode,
+      creatorResearch:
+        mode === "custom-research" && typeof creatorResearch === "string"
+          ? creatorResearch.trim()
+          : undefined,
     },
   };
 }

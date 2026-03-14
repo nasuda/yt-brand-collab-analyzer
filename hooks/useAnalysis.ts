@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import { AnalysisState, AnalysisResult, ResearchMode } from "@/lib/types";
+import { AnalysisState, AnalysisResult, ComparisonResult, ResearchMode } from "@/lib/types";
 
 const LOADING_STEPS: Record<ResearchMode, string[]> = {
   basic: [
@@ -21,6 +21,12 @@ const LOADING_STEPS: Record<ResearchMode, string[]> = {
     "Deep Researchを開始中...",
     "AIがクリエイターを徹底調査中...",
   ],
+  "custom-research": [
+    "チャンネル情報を取得中...",
+    "動画データを収集中...",
+    "コメントを分析中...",
+    "添付レポートをもとにAIが分析中...",
+  ],
 };
 
 const POLL_INTERVAL = 10_000; // 10秒ごとにポーリング
@@ -36,33 +42,43 @@ async function postJSON(url: string, body: unknown): Promise<{ ok: boolean; data
   return { ok: res.ok, data };
 }
 
+const INITIAL_STATE: AnalysisState = {
+  status: "idle",
+  result: null,
+  comparisonResult: null,
+  error: null,
+  loadingStep: "",
+  mode: "single",
+};
+
 export function useAnalysis() {
-  const [state, setState] = useState<AnalysisState>({
-    status: "idle",
-    result: null,
-    error: null,
-    loadingStep: "",
-  });
+  const [state, setState] = useState<AnalysisState>(INITIAL_STATE);
   const abortRef = useRef(false);
 
   const isAborted = () => abortRef.current;
 
   const setError = (error: string) => {
     if (isAborted()) return;
-    setState({ status: "error", result: null, error, loadingStep: "" });
+    setState((prev) => ({ ...prev, status: "error", result: null, comparisonResult: null, error, loadingStep: "" }));
   };
 
   const setSuccess = (result: AnalysisResult) => {
     if (isAborted()) return;
-    setState({ status: "success", result, error: null, loadingStep: "" });
+    setState((prev) => ({ ...prev, status: "success", result, error: null, loadingStep: "" }));
   };
 
-  /** basic / search モードの分析 */
+  const setComparisonSuccess = (comparisonResult: ComparisonResult) => {
+    if (isAborted()) return;
+    setState((prev) => ({ ...prev, status: "success", comparisonResult, error: null, loadingStep: "" }));
+  };
+
+  /** basic / search / custom-research モードの分析 */
   const analyzeStandard = async (
     channelInput: string,
     brandName: string,
     brandDescription: string | undefined,
-    researchMode: ResearchMode
+    researchMode: ResearchMode,
+    creatorResearch?: string
   ) => {
     const steps = LOADING_STEPS[researchMode];
     let stepIndex = 0;
@@ -75,7 +91,7 @@ export function useAnalysis() {
 
     try {
       const { ok, data } = await postJSON("/api/analyze", {
-        channelInput, brandName, brandDescription, researchMode,
+        channelInput, brandName, brandDescription, researchMode, creatorResearch,
       });
       clearInterval(stepTimer);
 
@@ -197,19 +213,68 @@ export function useAnalysis() {
     setSuccess(analyzeData as unknown as AnalysisResult);
   };
 
+  /** 複数チャンネル比較モード */
+  const analyzeCompare = async (
+    channels: string[],
+    brandName: string,
+    brandDescription?: string,
+    researchMode: ResearchMode = "basic"
+  ) => {
+    const total = channels.length;
+
+    // 進捗表示用タイマー
+    let currentChannel = 1;
+    const progressTimer = setInterval(() => {
+      setState((prev) => ({
+        ...prev,
+        loadingStep: `チャンネル ${Math.min(currentChannel, total)}/${total} を分析中...`,
+      }));
+    }, 5000);
+
+    try {
+      setState((prev) => ({
+        ...prev,
+        loadingStep: `チャンネル 1/${total} を分析中...`,
+      }));
+
+      const { ok, data } = await postJSON("/api/compare", {
+        channels,
+        brandName,
+        brandDescription,
+        researchMode: researchMode === "deep-research" ? "basic" : researchMode,
+      });
+
+      clearInterval(progressTimer);
+
+      if (!ok) {
+        setError((data.error as string) || "比較分析に失敗しました");
+        return;
+      }
+
+      setComparisonSuccess({
+        results: data.results as unknown as AnalysisResult[],
+        comparisonSummary: (data.comparisonSummary as string) || "",
+      });
+    } catch {
+      clearInterval(progressTimer);
+      setError("ネットワークエラーが発生しました");
+    }
+  };
+
   const analyze = useCallback(
     async (
       channelInput: string,
       brandName: string,
       brandDescription?: string,
-      researchMode: ResearchMode = "basic"
+      researchMode: ResearchMode = "basic",
+      creatorResearch?: string
     ) => {
       abortRef.current = false;
 
       setState({
+        ...INITIAL_STATE,
         status: "loading",
-        result: null,
-        error: null,
+        mode: "single",
         loadingStep: LOADING_STEPS[researchMode][0],
       });
 
@@ -217,12 +282,41 @@ export function useAnalysis() {
         if (researchMode === "deep-research") {
           await analyzeDeepResearch(channelInput, brandName, brandDescription);
         } else {
-          await analyzeStandard(channelInput, brandName, brandDescription, researchMode);
+          await analyzeStandard(channelInput, brandName, brandDescription, researchMode, creatorResearch);
         }
       } catch {
         setState((prev) =>
           prev.status === "loading"
-            ? { status: "error", result: null, error: "ネットワークエラーが発生しました", loadingStep: "" }
+            ? { ...prev, status: "error", result: null, comparisonResult: null, error: "ネットワークエラーが発生しました", loadingStep: "" }
+            : prev
+        );
+      }
+    },
+    []
+  );
+
+  const compare = useCallback(
+    async (
+      channels: string[],
+      brandName: string,
+      brandDescription?: string,
+      researchMode: ResearchMode = "basic"
+    ) => {
+      abortRef.current = false;
+
+      setState({
+        ...INITIAL_STATE,
+        status: "loading",
+        mode: "compare",
+        loadingStep: `チャンネル 1/${channels.length} を分析中...`,
+      });
+
+      try {
+        await analyzeCompare(channels, brandName, brandDescription, researchMode);
+      } catch {
+        setState((prev) =>
+          prev.status === "loading"
+            ? { ...prev, status: "error", result: null, comparisonResult: null, error: "ネットワークエラーが発生しました", loadingStep: "" }
             : prev
         );
       }
@@ -232,8 +326,8 @@ export function useAnalysis() {
 
   const reset = useCallback(() => {
     abortRef.current = true;
-    setState({ status: "idle", result: null, error: null, loadingStep: "" });
+    setState(INITIAL_STATE);
   }, []);
 
-  return { ...state, analyze, reset };
+  return { ...state, analyze, compare, reset };
 }

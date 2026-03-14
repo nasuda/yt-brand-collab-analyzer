@@ -94,6 +94,27 @@ export interface CollabIdea {
   distributionStrategy: DistributionStrategy;
 }
 
+export interface CategoryBenchmark {
+  channelCategory: string;
+  categoryTier: string;
+  engagementComparison: string;
+  viewEfficiencyComparison: string;
+}
+
+export interface AudiencePersona {
+  estimatedAgeRange: string;
+  estimatedGenderSplit: string;
+  estimatedInterests: string[];
+  estimatedRegion: string;
+  summary: string;
+}
+
+export interface SimilarCreator {
+  name: string;
+  handle: string;
+  reason: string;
+}
+
 export interface BrandFitAnalysis {
   overallScore: number;
   scoreBreakdown: ScoreBreakdown;
@@ -104,15 +125,35 @@ export interface BrandFitAnalysis {
   strengths: string[];
   risks: RiskItem[];
   collabIdeas: CollabIdea[];
+  categoryBenchmark: CategoryBenchmark;
+  audiencePersona: AudiencePersona;
+  similarCreators: SimilarCreator[];
+}
+
+export interface ChannelMetrics {
+  engagementRate: number;
+  avgViews: number;
+  viewsPerSubscriber: number;
+  likeRate: number;
+  commentRate: number;
+  postingFrequency: string;
+  viewTrend: "上昇" | "安定" | "下降";
+  topTags: string[];
 }
 
 export interface AnalysisResult {
   channel: ChannelInfo;
   videos: VideoInfo[];
   analysis: BrandFitAnalysis;
+  metrics: ChannelMetrics;
   brandName: string;
   researchMode: ResearchMode;
   creatorResearch?: string;
+}
+
+export interface ComparisonResult {
+  results: AnalysisResult[];
+  comparisonSummary: string;
 }
 
 export type AnalysisStatus = "idle" | "loading" | "success" | "error";
@@ -120,6 +161,8 @@ export type AnalysisStatus = "idle" | "loading" | "success" | "error";
 export interface AnalysisState {
   status: AnalysisStatus;
   result: AnalysisResult | null;
+  comparisonResult: ComparisonResult | null;
   error: string | null;
   loadingStep: string;
+  mode: "single" | "compare";
 }

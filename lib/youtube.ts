@@ -110,6 +110,23 @@ export async function resolveChannel(input: string): Promise<{ channel: ChannelI
       });
       break;
 
+    case "customUrl": {
+      // /c/customname: forHandle で解決を試み、customUrl が一致する場合のみ採用
+      const handleAttempt = await ytFetch<YouTubeChannelResponse>("channels", {
+        part: "snippet,statistics,contentDetails",
+        forHandle: parsed.value,
+      });
+      const resolved = handleAttempt.items?.[0];
+      if (resolved) {
+        const resolvedCustom = (resolved.snippet.customUrl || "").replace(/^@/, "").toLowerCase();
+        if (resolvedCustom === parsed.value.toLowerCase()) {
+          channelData = handleAttempt;
+          break;
+        }
+      }
+      throw new Error(`/c/ 形式のURLからチャンネルを特定できませんでした。@ハンドル名またはチャンネルURLで再入力してください: ${parsed.value}`);
+    }
+
     case "username":
       channelData = await ytFetch<YouTubeChannelResponse>("channels", {
         part: "snippet,statistics,contentDetails",
@@ -221,21 +238,21 @@ export async function getVideos(uploadsPlaylistId: string): Promise<VideoInfo[]>
     }
   }
 
-  // 最新5本（allVideoIdsの順序=新しい順）
-  const latest5 = allVideos.slice(0, 5);
-  const latest5Ids = new Set(latest5.map((v) => v.id));
+  // 最新10本（allVideoIdsの順序=新しい順）
+  const latest = allVideos.slice(0, 10);
+  const latestIds = new Set(latest.map((v) => v.id));
 
-  // 残りから再生数上位5本（チャンネル全体150本の中から選定）
-  const remaining = allVideos.filter((v) => !latest5Ids.has(v.id));
+  // 残りから再生数上位10本（チャンネル全体150本の中から選定）
+  const remaining = allVideos.filter((v) => !latestIds.has(v.id));
   remaining.sort((a, b) => b.viewCount - a.viewCount);
-  const popular5 = remaining.slice(0, 5);
+  const popular = remaining.slice(0, 10);
 
-  return [...latest5, ...popular5];
+  return [...latest, ...popular];
 }
 
 export async function getVideoComments(
   videoIds: string[],
-  perVideo: number = 30
+  perVideo: number = 10
 ): Promise<CommentInfo[]> {
   const results = await Promise.allSettled(
     videoIds.map(async (videoId) => {
