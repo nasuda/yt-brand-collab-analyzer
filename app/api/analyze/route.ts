@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateAnalysisRequest } from "@/lib/validators";
 import { resolveChannel, getVideos, getVideoComments } from "@/lib/youtube";
-import { analyzeBrandFit, performResearch, sanitizeResearch } from "@/lib/gemini";
+import {
+  analyzeBrandFit, performResearch, sanitizeResearch,
+  analyzeComments, analyzeContentPatterns, generateIdeaSketches,
+} from "@/lib/gemini";
 import { computeMetrics } from "@/lib/metrics";
+import { validateModelConfig } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,6 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { channelInput, brandName, brandDescription, researchMode, creatorResearch: userResearch } = validation.data;
+    const modelConfig = validateModelConfig(body.modelConfig);
 
     // Deep Research はクライアント側ポーリングで別途処理するため、ここでは basic/search/custom-research のみ
     const effectiveMode = researchMode === "deep-research" ? "basic" : researchMode;
@@ -27,7 +32,7 @@ export async function POST(request: NextRequest) {
       getVideos(uploadsPlaylistId),
       effectiveMode === "custom-research"
         ? Promise.resolve(undefined)
-        : performResearch(effectiveMode, channel, brandName),
+        : performResearch(effectiveMode, channel, brandName, modelConfig.researchModel),
     ]);
 
     const { videos, latestVideos } = videosResult;
@@ -43,14 +48,32 @@ export async function POST(request: NextRequest) {
     // Step 4: Compute metrics（時系列指標にはlatestVideosのみ使用）
     const metrics = computeMetrics(channel, videos, latestVideos);
 
-    // Step 5: Analyze with Gemini
+    // Step 5: Pre-analysis（コメント分析 + コンテンツパターン分析を並列実行）
+    const [commentAnalysis, contentPatterns] = await Promise.all([
+      analyzeComments(comments, modelConfig.helperModel),
+      analyzeContentPatterns(videos, modelConfig.helperModel),
+    ]);
+
+    // Step 6: Idea sketches
+    const ideaSketches = await generateIdeaSketches(
+      channel, videos, brandName, brandDescription,
+      commentAnalysis, contentPatterns,
+      modelConfig.helperModel,
+    );
+
+    // Step 7: Analyze with Gemini
     const analysis = await analyzeBrandFit(
       channel,
       videos,
       comments,
       brandName,
       brandDescription,
-      finalResearch
+      finalResearch,
+      modelConfig.analysisModel,
+      metrics,
+      commentAnalysis,
+      contentPatterns,
+      ideaSketches,
     );
 
     return NextResponse.json({

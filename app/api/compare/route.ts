@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveChannel, getVideos, getVideoComments } from "@/lib/youtube";
-import { analyzeBrandFit, performResearch } from "@/lib/gemini";
+import {
+  analyzeBrandFit, performResearch,
+  analyzeComments, analyzeContentPatterns, generateIdeaSketches,
+} from "@/lib/gemini";
 import { computeMetrics } from "@/lib/metrics";
 import { GoogleGenAI } from "@google/genai";
-import type { AnalysisResult, ResearchMode } from "@/lib/types";
+import { validateModelConfig, DEFAULT_MODEL_CONFIG } from "@/lib/types";
+import type { AnalysisResult, ResearchMode, ModelConfig } from "@/lib/types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
@@ -14,6 +18,7 @@ interface CompareRequest {
   brandName: string;
   brandDescription?: string;
   researchMode: ResearchMode;
+  modelConfig?: ModelConfig;
 }
 
 interface ResolvedChannel {
@@ -26,7 +31,8 @@ async function analyzeResolvedChannel(
   resolved: ResolvedChannel,
   brandName: string,
   brandDescription: string | undefined,
-  researchMode: ResearchMode
+  researchMode: ResearchMode,
+  modelConfig: ModelConfig,
 ): Promise<AnalysisResult> {
   const effectiveMode = researchMode === "deep-research" ? "basic" : researchMode;
   const { channel, uploadsPlaylistId } = resolved;
@@ -35,7 +41,7 @@ async function analyzeResolvedChannel(
     getVideos(uploadsPlaylistId),
     effectiveMode === "custom-research"
       ? Promise.resolve(undefined)
-      : performResearch(effectiveMode, channel, brandName),
+      : performResearch(effectiveMode, channel, brandName, modelConfig.researchModel),
   ]);
 
   const { videos, latestVideos } = videosResult;
@@ -43,13 +49,30 @@ async function analyzeResolvedChannel(
   const metrics = computeMetrics(channel, videos, latestVideos);
   const comments = await getVideoComments(videos.map((v) => v.id));
 
+  // Pre-analysis
+  const [commentAnalysis, contentPatterns] = await Promise.all([
+    analyzeComments(comments, modelConfig.helperModel),
+    analyzeContentPatterns(videos, modelConfig.helperModel),
+  ]);
+
+  const ideaSketches = await generateIdeaSketches(
+    channel, videos, brandName, brandDescription,
+    commentAnalysis, contentPatterns,
+    modelConfig.helperModel,
+  );
+
   const analysis = await analyzeBrandFit(
     channel,
     videos,
     comments,
     brandName,
     brandDescription,
-    finalResearch
+    finalResearch,
+    modelConfig.analysisModel,
+    metrics,
+    commentAnalysis,
+    contentPatterns,
+    ideaSketches,
   );
 
   return {
@@ -65,7 +88,8 @@ async function analyzeResolvedChannel(
 
 async function generateComparisonSummary(
   results: AnalysisResult[],
-  brandName: string
+  brandName: string,
+  model: string = DEFAULT_MODEL_CONFIG.researchModel,
 ): Promise<string> {
   const summaries = results
     .map(
@@ -81,7 +105,7 @@ ${summaries}
 広告主がどのチャンネルを選ぶべきかの判断材料として、各チャンネルの強み・弱みの比較と推奨順位を述べてください。`;
 
   const response = await ai.models.generateContent({
-    model: "gemini-3.1-pro-preview",
+    model,
     contents: prompt,
   });
 
@@ -91,6 +115,7 @@ ${summaries}
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as CompareRequest;
+    const modelConfig = validateModelConfig(body.modelConfig);
 
     if (
       !Array.isArray(body.channels) ||
@@ -152,7 +177,8 @@ export async function POST(request: NextRequest) {
           resolved,
           body.brandName.trim(),
           body.brandDescription?.trim(),
-          researchMode
+          researchMode,
+          modelConfig,
         );
         results.push(result);
       } catch (err) {
@@ -179,7 +205,7 @@ export async function POST(request: NextRequest) {
     // 比較サマリー生成
     const comparisonSummary =
       results.length >= 2
-        ? await generateComparisonSummary(results, body.brandName.trim())
+        ? await generateComparisonSummary(results, body.brandName.trim(), modelConfig.researchModel)
         : "";
 
     return NextResponse.json({

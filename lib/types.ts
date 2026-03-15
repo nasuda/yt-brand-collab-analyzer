@@ -1,5 +1,41 @@
 export type ResearchMode = "basic" | "search" | "deep-research" | "custom-research";
 
+export interface ModelConfig {
+  analysisModel: string;
+  researchModel: string;
+  helperModel: string;
+}
+
+export const AVAILABLE_MODELS = [
+  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", description: "高速・低コスト" },
+  { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", description: "高性能・バランス" },
+  { id: "gemini-3.1-pro-preview", label: "Gemini 3.1 Pro", description: "最新・最高品質" },
+] as const;
+
+export const DEFAULT_MODEL_CONFIG: ModelConfig = {
+  analysisModel: "gemini-2.5-flash",
+  researchModel: "gemini-2.5-flash",
+  helperModel: "gemini-2.5-flash",
+};
+
+const ALLOWED_MODEL_IDS: Set<string> = new Set(AVAILABLE_MODELS.map((m) => m.id));
+
+/** リクエストの modelConfig を検証し、不足フィールドをデフォルトで埋め、不正なモデルIDを弾く */
+export function validateModelConfig(input: unknown): ModelConfig {
+  if (!input || typeof input !== "object") return { ...DEFAULT_MODEL_CONFIG };
+
+  const raw = input as Record<string, unknown>;
+  const merged: ModelConfig = {
+    analysisModel: typeof raw.analysisModel === "string" && ALLOWED_MODEL_IDS.has(raw.analysisModel)
+      ? raw.analysisModel : DEFAULT_MODEL_CONFIG.analysisModel,
+    researchModel: typeof raw.researchModel === "string" && ALLOWED_MODEL_IDS.has(raw.researchModel)
+      ? raw.researchModel : DEFAULT_MODEL_CONFIG.researchModel,
+    helperModel: typeof raw.helperModel === "string" && ALLOWED_MODEL_IDS.has(raw.helperModel)
+      ? raw.helperModel : DEFAULT_MODEL_CONFIG.helperModel,
+  };
+  return merged;
+}
+
 export interface AnalysisRequest {
   channelInput: string;
   brandName: string;
@@ -81,6 +117,10 @@ export interface DistributionStrategy {
   budgetAllocation: string;        // 予算配分の方向性
 }
 
+export type FunnelStage = "認知" | "検討" | "獲得";
+export type RiskLevel = "安全策" | "標準" | "挑戦的";
+export type CampaignType = "単発" | "シリーズ" | "キャンペーン";
+
 export interface CollabIdea {
   title: string;
   format: string;
@@ -92,6 +132,11 @@ export interface CollabIdea {
   brandSafetyNote: string;
   postingInstruction: PostingInstruction;
   distributionStrategy: DistributionStrategy;
+  funnelStage: FunnelStage;
+  riskLevel: RiskLevel;
+  campaignType: CampaignType;
+  creatorPattern: string;
+  viewerHook: string;
 }
 
 export interface CategoryBenchmark {
@@ -171,4 +216,33 @@ export interface AnalysisState {
   error: string | null;
   loadingStep: string;
   mode: "single" | "compare";
+}
+
+// Phase B types
+export interface CommentAnalysis {
+  topTopics: string[];
+  sentimentSummary: string;
+  engagementDrivers: string[];
+  frequentRequests: string[];
+}
+
+export interface ContentPatternType {
+  type: string;
+  examples: string[];
+  frequency: string;
+}
+
+export interface ContentPatternAnalysis {
+  contentTypes: ContentPatternType[];
+  bestPerformingType: string;
+  signatureElements: string[];
+  collaborationHistory: string;
+}
+
+export interface IdeaSketch {
+  title: string;
+  format: string;
+  funnelStage: string;
+  oneLiner: string;
+  basedOn: string;
 }
