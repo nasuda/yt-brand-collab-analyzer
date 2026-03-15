@@ -69,7 +69,7 @@ export function useExportPDF() {
       const sections = reportElement.querySelectorAll<HTMLElement>("[data-section]");
       const pdf = new jsPDF("p", "mm", "a4");
       let currentY = MARGIN_TOP;
-      let pageNum = 1;
+      let hasCover = false;
       let isFirstPage = true;
 
       const html2canvasOpts = {
@@ -79,25 +79,12 @@ export function useExportPDF() {
         backgroundColor: "#ffffff" as const,
       };
 
-      function drawPageDecorations(isCover: boolean) {
-        if (isCover) return;
-        // ヘッダーアクセントバー
-        pdf.setFillColor(ACCENT_COLOR_R, ACCENT_COLOR_G, ACCENT_COLOR_B);
-        pdf.rect(0, 0, PAGE_WIDTH, 3, "F");
-        // フッターページ番号
-        pdf.setFontSize(8);
-        pdf.setTextColor(156, 163, 175);
-        pdf.text(`${pageNum}`, PAGE_WIDTH / 2, PAGE_HEIGHT - 5, { align: "center" });
-      }
-
       function startNewPage(isCover: boolean) {
         if (!isFirstPage) {
           pdf.addPage();
         }
         isFirstPage = false;
-        pageNum++;
         currentY = isCover ? 0 : MARGIN_TOP;
-        drawPageDecorations(isCover);
       }
 
       function canvasToImgHeight(canvas: HTMLCanvasElement): number {
@@ -151,6 +138,7 @@ export function useExportPDF() {
 
         if (isCover) {
           // 表紙は常に専用ページ
+          hasCover = true;
           startNewPage(true);
           const canvas = await html2canvas(section, {
             ...html2canvasOpts,
@@ -162,6 +150,10 @@ export function useExportPDF() {
           currentY = MARGIN_TOP + USABLE_HEIGHT; // ページ満杯扱い
           continue;
         }
+
+        // 最初の非表紙コンテンツ: startNewPageを経由しない直接配置でも
+        // 次のstartNewPageが正しくaddPage()するようisFirstPageを解除
+        isFirstPage = false;
 
         // セクション全体をキャプチャ
         const canvas = await html2canvas(section, {
@@ -230,8 +222,20 @@ export function useExportPDF() {
         }
       }
 
-      // 最初のページにもデコレーションを描画（表紙でない場合）
-      // 注: 最初のページが表紙の場合、decorationsは既に処理済み
+      // 全ての非表紙ページにデコレーションを後処理で描画
+      const totalPages = pdf.getNumberOfPages();
+      const firstContentPage = hasCover ? 2 : 1;
+      for (let i = firstContentPage; i <= totalPages; i++) {
+        pdf.setPage(i);
+        // ヘッダーアクセントバー
+        pdf.setFillColor(ACCENT_COLOR_R, ACCENT_COLOR_G, ACCENT_COLOR_B);
+        pdf.rect(0, 0, PAGE_WIDTH, 3, "F");
+        // フッターページ番号
+        pdf.setFontSize(8);
+        pdf.setTextColor(156, 163, 175);
+        const displayPageNum = i - firstContentPage + 1;
+        pdf.text(`${displayPageNum}`, PAGE_WIDTH / 2, PAGE_HEIGHT - 5, { align: "center" });
+      }
 
       pdf.save(`${filename}.pdf`);
     } finally {
