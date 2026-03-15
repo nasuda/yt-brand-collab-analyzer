@@ -1038,19 +1038,36 @@ export async function analyzeBrandFit(
   if (!Array.isArray(raw.collabIdeas) || raw.collabIdeas.length === 0) {
     errors.push("collabIdeas");
   } else {
-    // ネスト必須フィールドの検証: postingInstruction / distributionStrategy が欠損していたらfail
-    const malformedIdeas = raw.collabIdeas.filter(
-      (idea: unknown) => {
-        if (!idea || typeof idea !== "object") return true;
-        const r = idea as Record<string, unknown>;
-        if (!r.postingInstruction || typeof r.postingInstruction !== "object") return true;
-        if (!r.distributionStrategy || typeof r.distributionStrategy !== "object") return true;
-        return false;
+    // 個別企画のrequired nested fieldsを検証し、不適合な企画を除外
+    const requiredIdeaFields = ["title", "format", "description", "funnelStage", "riskLevel", "campaignType"] as const;
+    raw.collabIdeas = raw.collabIdeas.filter((idea: unknown) => {
+      if (!idea || typeof idea !== "object") return false;
+      const r = idea as Record<string, unknown>;
+      for (const field of requiredIdeaFields) {
+        if (typeof r[field] !== "string" || !(r[field] as string).trim()) return false;
       }
-    );
-    if (malformedIdeas.length === raw.collabIdeas.length) {
-      errors.push("collabIdeas (全企画で postingInstruction/distributionStrategy が欠損)");
+      if (!r.postingInstruction || typeof r.postingInstruction !== "object") return false;
+      if (!r.distributionStrategy || typeof r.distributionStrategy !== "object") return false;
+      return true;
+    });
+    if (raw.collabIdeas.length === 0) {
+      errors.push("collabIdeas (全企画がrequired fieldsを満たしていません)");
     }
+  }
+
+  // categoryBenchmark / audiencePersona の必須フィールド検証
+  if (!raw.categoryBenchmark || typeof raw.categoryBenchmark !== "object") {
+    errors.push("categoryBenchmark");
+  } else {
+    const cb = raw.categoryBenchmark as Record<string, unknown>;
+    if (typeof cb.channelCategory !== "string") errors.push("categoryBenchmark.channelCategory");
+  }
+  if (!raw.audiencePersona || typeof raw.audiencePersona !== "object") {
+    errors.push("audiencePersona");
+  } else {
+    const ap = raw.audiencePersona as Record<string, unknown>;
+    if (typeof ap.estimatedAgeRange !== "string") errors.push("audiencePersona.estimatedAgeRange");
+    if (typeof ap.estimatedGenderSplit !== "string") errors.push("audiencePersona.estimatedGenderSplit");
   }
 
   if (errors.length > 0) {
@@ -1084,20 +1101,20 @@ export async function analyzeBrandFit(
     ? bs.recommendation
     : "条件付き推奨";
 
-  // categoryBenchmark のフォールバック付き抽出
-  const cb = raw.categoryBenchmark || {};
+  // categoryBenchmark（バリデーション済み — 必須フィールドは検証通過済み）
+  const cb = raw.categoryBenchmark as Record<string, unknown>;
   const categoryBenchmark = {
-    channelCategory: typeof cb.channelCategory === "string" ? cb.channelCategory : "不明",
+    channelCategory: cb.channelCategory as string,
     categoryTier: typeof cb.categoryTier === "string" ? cb.categoryTier : "データ不足",
     engagementComparison: typeof cb.engagementComparison === "string" ? cb.engagementComparison : "データ不足",
     viewEfficiencyComparison: typeof cb.viewEfficiencyComparison === "string" ? cb.viewEfficiencyComparison : "データ不足",
   };
 
-  // audiencePersona のフォールバック付き抽出
-  const ap = raw.audiencePersona || {};
+  // audiencePersona（バリデーション済み — 必須フィールドは検証通過済み）
+  const ap = raw.audiencePersona as Record<string, unknown>;
   const audiencePersona = {
-    estimatedAgeRange: typeof ap.estimatedAgeRange === "string" ? ap.estimatedAgeRange : "不明",
-    estimatedGenderSplit: typeof ap.estimatedGenderSplit === "string" ? ap.estimatedGenderSplit : "不明",
+    estimatedAgeRange: ap.estimatedAgeRange as string,
+    estimatedGenderSplit: ap.estimatedGenderSplit as string,
     estimatedInterests: Array.isArray(ap.estimatedInterests)
       ? ap.estimatedInterests.filter((i: unknown) => typeof i === "string")
       : [],
