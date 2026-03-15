@@ -4,10 +4,9 @@ import { resolveChannel, getVideos, getVideoComments } from "@/lib/youtube";
 import {
   analyzeBrandFit, performResearch, sanitizeResearch,
   analyzeComments, analyzeContentPatterns, generateIdeaSketches,
-  DEFAULT_MODEL_CONFIG,
 } from "@/lib/gemini";
 import { computeMetrics } from "@/lib/metrics";
-import type { ModelConfig } from "@/lib/types";
+import { validateModelConfig } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { channelInput, brandName, brandDescription, researchMode, creatorResearch: userResearch } = validation.data;
-    const modelConfig: ModelConfig = body.modelConfig || DEFAULT_MODEL_CONFIG;
+    const modelConfig = validateModelConfig(body.modelConfig);
 
     // Deep Research はクライアント側ポーリングで別途処理するため、ここでは basic/search/custom-research のみ
     const effectiveMode = researchMode === "deep-research" ? "basic" : researchMode;

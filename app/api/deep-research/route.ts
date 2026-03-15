@@ -6,16 +6,15 @@ import {
   startDeepResearch, pollDeepResearch, performResearch,
   analyzeBrandFit, sanitizeResearch,
   analyzeComments, analyzeContentPatterns, generateIdeaSketches,
-  DEFAULT_MODEL_CONFIG,
 } from "@/lib/gemini";
-import type { ModelConfig } from "@/lib/types";
+import { validateModelConfig } from "@/lib/types";
 
 // POST: Deep Research を開始し、interactionId + YouTube データを返す
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { action } = body as { action?: string };
-    const modelConfig: ModelConfig = body.modelConfig || DEFAULT_MODEL_CONFIG;
+    const modelConfig = validateModelConfig(body.modelConfig);
 
     if (action === "poll") {
       // --- ポーリング: interactionId の状態を確認 ---

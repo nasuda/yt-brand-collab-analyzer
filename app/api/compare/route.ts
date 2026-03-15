@@ -3,10 +3,10 @@ import { resolveChannel, getVideos, getVideoComments } from "@/lib/youtube";
 import {
   analyzeBrandFit, performResearch,
   analyzeComments, analyzeContentPatterns, generateIdeaSketches,
-  DEFAULT_MODEL_CONFIG,
 } from "@/lib/gemini";
 import { computeMetrics } from "@/lib/metrics";
 import { GoogleGenAI } from "@google/genai";
+import { validateModelConfig, DEFAULT_MODEL_CONFIG } from "@/lib/types";
 import type { AnalysisResult, ResearchMode, ModelConfig } from "@/lib/types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
@@ -115,7 +115,7 @@ ${summaries}
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as CompareRequest;
-    const modelConfig: ModelConfig = body.modelConfig || DEFAULT_MODEL_CONFIG;
+    const modelConfig = validateModelConfig(body.modelConfig);
 
     if (
       !Array.isArray(body.channels) ||

@@ -468,7 +468,7 @@ export const PrintableReport = forwardRef<HTMLDivElement, PrintableReportProps>(
                   <div style={{ fontSize: "10px", fontWeight: 600, marginBottom: "6px", color: "#1e40af" }}>配信戦略</div>
                   <p style={{ fontSize: "10px" }}><strong>広告:</strong> {idea.distributionStrategy.adProduct}</p>
                   {idea.distributionStrategy.mixStrategy && (
-                    <p style={{ fontSize: "10px" }}><strong>ミックス戦略:</strong> {idea.distributionStrategy.mixStrategy}</p>
+                    <p style={{ fontSize: "10px" }}><strong>ミックス方針:</strong> {idea.distributionStrategy.mixStrategy}</p>
                   )}
                   <p style={{ fontSize: "10px" }}><strong>ターゲティング:</strong> {idea.distributionStrategy.audienceTargeting}</p>
                   <p style={{ fontSize: "10px" }}><strong>予算配分:</strong> {idea.distributionStrategy.budgetAllocation}</p>

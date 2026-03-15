@@ -18,6 +18,24 @@ export const DEFAULT_MODEL_CONFIG: ModelConfig = {
   helperModel: "gemini-2.5-flash",
 };
 
+const ALLOWED_MODEL_IDS: Set<string> = new Set(AVAILABLE_MODELS.map((m) => m.id));
+
+/** リクエストの modelConfig を検証し、不足フィールドをデフォルトで埋め、不正なモデルIDを弾く */
+export function validateModelConfig(input: unknown): ModelConfig {
+  if (!input || typeof input !== "object") return { ...DEFAULT_MODEL_CONFIG };
+
+  const raw = input as Record<string, unknown>;
+  const merged: ModelConfig = {
+    analysisModel: typeof raw.analysisModel === "string" && ALLOWED_MODEL_IDS.has(raw.analysisModel)
+      ? raw.analysisModel : DEFAULT_MODEL_CONFIG.analysisModel,
+    researchModel: typeof raw.researchModel === "string" && ALLOWED_MODEL_IDS.has(raw.researchModel)
+      ? raw.researchModel : DEFAULT_MODEL_CONFIG.researchModel,
+    helperModel: typeof raw.helperModel === "string" && ALLOWED_MODEL_IDS.has(raw.helperModel)
+      ? raw.helperModel : DEFAULT_MODEL_CONFIG.helperModel,
+  };
+  return merged;
+}
+
 export interface AnalysisRequest {
   channelInput: string;
   brandName: string;
