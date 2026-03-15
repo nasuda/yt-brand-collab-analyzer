@@ -38,9 +38,12 @@ function safetyBadge(rec: string): { bg: string; text: string } {
   }
 }
 
+const ACCENT_COLOR = "#4f46e5";
+const ACCENT_DARK = "#1e1b4b";
+
 export const PrintableReport = forwardRef<HTMLDivElement, PrintableReportProps>(
   function PrintableReport({ result, settings }, ref) {
-    const { channel, analysis, metrics, brandName } = result;
+    const { channel, videos, analysis, metrics, brandName } = result;
     const s = settings.sections;
 
     const ideas =
@@ -71,25 +74,46 @@ export const PrintableReport = forwardRef<HTMLDivElement, PrintableReportProps>(
           <div
             data-section="cover"
             style={{
-              minHeight: "297mm",
+              height: "297mm",
               display: "flex",
               flexDirection: "column",
               justifyContent: "center",
               alignItems: "center",
               padding: "40mm 20mm",
               textAlign: "center",
-              breakAfter: "page",
+              position: "relative",
+              overflow: "hidden",
             }}
           >
-            <div style={{ fontSize: "14px", color: "#6b7280", marginBottom: "16px" }}>
+            {/* 上部アクセントバー */}
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                height: "6px",
+                background: `linear-gradient(90deg, ${ACCENT_COLOR}, #7c3aed)`,
+              }}
+            />
+            <div style={{ fontSize: "13px", color: "#6b7280", letterSpacing: "0.15em", marginBottom: "20px" }}>
               ブランドコラボレーション適合性レポート
             </div>
-            <div style={{ fontSize: "28px", fontWeight: 700, marginBottom: "8px" }}>
+            <div style={{ fontSize: "30px", fontWeight: 700, color: ACCENT_DARK, marginBottom: "8px" }}>
               {brandName}
             </div>
-            <div style={{ fontSize: "20px", color: "#6b7280", marginBottom: "40px" }}>
+            <div style={{ fontSize: "20px", color: "#6b7280", marginBottom: "24px" }}>
               × {channel.title}
             </div>
+            {/* 装飾ライン */}
+            <div
+              style={{
+                width: "60px",
+                height: "3px",
+                background: ACCENT_COLOR,
+                margin: "0 auto 24px",
+              }}
+            />
             <div style={{ fontSize: "12px", color: "#9ca3af" }}>
               分析日: {today}
               {settings.authorName && ` | 作成者: ${settings.authorName}`}
@@ -99,7 +123,7 @@ export const PrintableReport = forwardRef<HTMLDivElement, PrintableReportProps>(
 
         {/* エグゼクティブサマリー */}
         {s.summary !== false && (
-          <div data-section="summary" style={{ padding: "15mm 20mm", breakAfter: "page" }}>
+          <div data-section="summary" style={{ padding: "15mm 20mm" }}>
             <h2 style={sectionTitle}>エグゼクティブサマリー</h2>
 
             <div style={{ display: "flex", alignItems: "center", gap: "24px", marginBottom: "20px" }}>
@@ -115,6 +139,7 @@ export const PrintableReport = forwardRef<HTMLDivElement, PrintableReportProps>(
                   fontSize: "32px",
                   fontWeight: 700,
                   color: scoreColor(analysis.overallScore),
+                  flexShrink: 0,
                 }}
               >
                 {analysis.overallScore}
@@ -174,7 +199,7 @@ export const PrintableReport = forwardRef<HTMLDivElement, PrintableReportProps>(
 
         {/* 定量メトリクス */}
         {s.metrics !== false && metrics && (
-          <div data-section="metrics" style={{ padding: "15mm 20mm", breakAfter: "page" }}>
+          <div data-section="metrics" style={{ padding: "15mm 20mm" }}>
             <h2 style={sectionTitle}>定量エンゲージメント分析</h2>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
               {[
@@ -197,9 +222,66 @@ export const PrintableReport = forwardRef<HTMLDivElement, PrintableReportProps>(
           </div>
         )}
 
+        {/* 分析対象動画 */}
+        {s.videos !== false && videos.length > 0 && (
+          <div data-section="videos" style={{ padding: "15mm 20mm" }}>
+            <h2 style={sectionTitle}>分析対象動画（{videos.length}本）</h2>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: "10px",
+              }}
+            >
+              <thead>
+                <tr>
+                  {["#", "タイトル", "公開日", "再生数", "いいね", "コメント"].map((h) => (
+                    <th
+                      key={h}
+                      style={{
+                        padding: "8px 6px",
+                        textAlign: h === "タイトル" ? "left" : "right",
+                        fontSize: "10px",
+                        fontWeight: 700,
+                        borderBottom: `2px solid ${ACCENT_COLOR}`,
+                        color: ACCENT_DARK,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {videos.map((video, i) => (
+                  <tr
+                    key={video.id}
+                    data-sub-section
+                    style={{ background: i % 2 === 0 ? "#fff" : "#f9fafb" }}
+                  >
+                    <td style={{ ...tdStyle, textAlign: "right", color: "#9ca3af", width: "24px" }}>{i + 1}</td>
+                    <td style={{ ...tdStyle, textAlign: "left", maxWidth: "280px" }}>
+                      <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {video.title}
+                      </div>
+                    </td>
+                    <td style={{ ...tdStyle, textAlign: "right", whiteSpace: "nowrap" }}>
+                      {new Date(video.publishedAt).toLocaleDateString("ja-JP")}
+                    </td>
+                    <td style={{ ...tdStyle, textAlign: "right", fontWeight: 600 }}>{formatNumber(video.viewCount)}</td>
+                    <td style={{ ...tdStyle, textAlign: "right" }}>{formatNumber(video.likeCount)}</td>
+                    <td style={{ ...tdStyle, textAlign: "right" }}>{formatNumber(video.commentCount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
         {/* カテゴリベンチマーク & オーディエンス */}
         {s.benchmark !== false && analysis.categoryBenchmark && (
-          <div data-section="benchmark" style={{ padding: "15mm 20mm", breakAfter: "page" }}>
+          <div data-section="benchmark" style={{ padding: "15mm 20mm" }}>
             <h2 style={sectionTitle}>カテゴリベンチマーク & オーディエンス</h2>
 
             <div style={{ marginBottom: "16px" }}>
@@ -222,7 +304,12 @@ export const PrintableReport = forwardRef<HTMLDivElement, PrintableReportProps>(
               </div>
             </div>
 
-            <h3 style={{ fontSize: "14px", fontWeight: 600, marginBottom: "12px" }}>推定オーディエンスペルソナ</h3>
+            <h3 style={{ fontSize: "14px", fontWeight: 600, marginBottom: "8px", color: ACCENT_DARK }}>推定オーディエンスペルソナ</h3>
+            {analysis.audiencePersona.summary && (
+              <p style={{ fontSize: "11px", color: "#374151", marginBottom: "12px" }}>
+                {analysis.audiencePersona.summary}
+              </p>
+            )}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
               <div style={metricCard}>
                 <div style={{ fontSize: "10px", color: "#6b7280" }}>年齢層</div>
@@ -241,12 +328,28 @@ export const PrintableReport = forwardRef<HTMLDivElement, PrintableReportProps>(
                 <div style={{ fontSize: "11px", marginTop: "4px" }}>{analysis.audiencePersona.estimatedInterests.join(", ")}</div>
               </div>
             </div>
+
+            {/* 類似クリエイター */}
+            {analysis.similarCreators && analysis.similarCreators.length > 0 && (
+              <div style={{ marginTop: "20px" }}>
+                <h3 style={{ fontSize: "14px", fontWeight: 600, marginBottom: "8px", color: ACCENT_DARK }}>類似クリエイター</h3>
+                {analysis.similarCreators.map((creator, i) => (
+                  <div key={i} data-sub-section style={{ padding: "8px 12px", borderLeft: `3px solid #ede9fe`, marginBottom: "6px", background: "#fafafa", borderRadius: "0 6px 6px 0" }}>
+                    <div style={{ fontSize: "12px", fontWeight: 600 }}>
+                      {creator.name}
+                      <span style={{ fontWeight: 400, color: "#6b7280", marginLeft: "6px" }}>{creator.handle}</span>
+                    </div>
+                    <div style={{ fontSize: "10px", color: "#6b7280", marginTop: "2px" }}>{creator.reason}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {/* ブランドセーフティ */}
         {s.safety !== false && (
-          <div data-section="safety" style={{ padding: "15mm 20mm", breakAfter: "page" }}>
+          <div data-section="safety" style={{ padding: "15mm 20mm" }}>
             <h2 style={sectionTitle}>ブランドセーフティ</h2>
             <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "16px" }}>
               <div style={{ fontSize: "28px", fontWeight: 700, color: scoreColor(analysis.brandSafety.safetyScore) }}>
@@ -269,7 +372,7 @@ export const PrintableReport = forwardRef<HTMLDivElement, PrintableReportProps>(
               <div>
                 <h3 style={{ fontSize: "12px", fontWeight: 600, marginBottom: "8px" }}>懸念事項</h3>
                 {analysis.brandSafety.concerns.map((concern, i) => (
-                  <div key={i} style={{ padding: "8px 12px", border: "1px solid #e5e7eb", borderRadius: "6px", marginBottom: "8px" }}>
+                  <div key={i} data-sub-section style={{ padding: "8px 12px", border: "1px solid #e5e7eb", borderLeft: "3px solid #dc2626", borderRadius: "6px", marginBottom: "8px" }}>
                     <p style={{ fontSize: "11px" }}>{concern.description}</p>
                   </div>
                 ))}
@@ -280,13 +383,40 @@ export const PrintableReport = forwardRef<HTMLDivElement, PrintableReportProps>(
 
         {/* コラボ企画案 */}
         {s.ideas !== false && (
-          <div data-section="ideas" style={{ padding: "15mm 20mm", breakAfter: "page" }}>
+          <div data-section="ideas" style={{ padding: "15mm 20mm" }}>
             <h2 style={sectionTitle}>コラボ企画案 Top {ideas.length}</h2>
             {ideas.map((idea, i) => (
-              <div key={i} style={{ border: "1px solid #e5e7eb", borderRadius: "8px", padding: "16px", marginBottom: "16px" }}>
+              <div
+                key={i}
+                data-sub-section
+                style={{
+                  borderLeft: `4px solid ${ACCENT_COLOR}`,
+                  borderRadius: "0 8px 8px 0",
+                  padding: "16px",
+                  marginBottom: "16px",
+                  background: "#fafafa",
+                }}
+              >
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: 700 }}>{i + 1}. {idea.title}</span>
-                  <span style={{ padding: "2px 8px", borderRadius: "12px", background: "#f3f4f6", fontSize: "10px" }}>
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "24px",
+                      height: "24px",
+                      borderRadius: "50%",
+                      background: ACCENT_COLOR,
+                      color: "#fff",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {i + 1}
+                  </span>
+                  <span style={{ fontSize: "14px", fontWeight: 700 }}>{idea.title}</span>
+                  <span style={{ padding: "2px 8px", borderRadius: "12px", background: "#e5e7eb", fontSize: "10px" }}>
                     {idea.format}
                   </span>
                   <span style={{ padding: "2px 8px", borderRadius: "12px", background: "#ecfdf5", fontSize: "10px", color: "#065f46" }}>
@@ -301,17 +431,23 @@ export const PrintableReport = forwardRef<HTMLDivElement, PrintableReportProps>(
                 </div>
 
                 {/* 投稿指示書 */}
-                <div style={{ marginTop: "12px", padding: "10px", background: "#f9fafb", borderRadius: "6px" }}>
-                  <div style={{ fontSize: "10px", fontWeight: 600, marginBottom: "6px" }}>投稿指示書</div>
+                <div style={{ marginTop: "12px", padding: "10px", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "6px" }}>
+                  <div style={{ fontSize: "10px", fontWeight: 600, marginBottom: "6px", color: "#065f46" }}>投稿指示書</div>
                   <p style={{ fontSize: "10px" }}><strong>方向性:</strong> {idea.postingInstruction.contentDirection}</p>
                   <p style={{ fontSize: "10px" }}><strong>キーメッセージ:</strong> {idea.postingInstruction.keyMessages.join(" / ")}</p>
                   <p style={{ fontSize: "10px" }}><strong>トーン&マナー:</strong> {idea.postingInstruction.toneAndManner}</p>
+                  {idea.postingInstruction.descriptionBoxSuggestion && (
+                    <p style={{ fontSize: "10px" }}><strong>概要欄:</strong> {idea.postingInstruction.descriptionBoxSuggestion}</p>
+                  )}
                 </div>
 
                 {/* 配信戦略 */}
-                <div style={{ marginTop: "8px", padding: "10px", background: "#f0f9ff", borderRadius: "6px" }}>
-                  <div style={{ fontSize: "10px", fontWeight: 600, marginBottom: "6px" }}>配信戦略</div>
+                <div style={{ marginTop: "8px", padding: "10px", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "6px" }}>
+                  <div style={{ fontSize: "10px", fontWeight: 600, marginBottom: "6px", color: "#1e40af" }}>配信戦略</div>
                   <p style={{ fontSize: "10px" }}><strong>広告:</strong> {idea.distributionStrategy.adProduct}</p>
+                  {idea.distributionStrategy.mixStrategy && (
+                    <p style={{ fontSize: "10px" }}><strong>ミックス戦略:</strong> {idea.distributionStrategy.mixStrategy}</p>
+                  )}
                   <p style={{ fontSize: "10px" }}><strong>ターゲティング:</strong> {idea.distributionStrategy.audienceTargeting}</p>
                   <p style={{ fontSize: "10px" }}><strong>予算配分:</strong> {idea.distributionStrategy.budgetAllocation}</p>
                 </div>
@@ -327,16 +463,16 @@ export const PrintableReport = forwardRef<HTMLDivElement, PrintableReportProps>(
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
               <div>
                 <h3 style={{ fontSize: "12px", fontWeight: 600, color: "#16a34a", marginBottom: "8px" }}>強み</h3>
-                {analysis.strengths.map((s, i) => (
-                  <div key={i} style={{ padding: "6px 0", borderBottom: "1px solid #f3f4f6", fontSize: "11px" }}>
-                    {s}
+                {analysis.strengths.map((str, i) => (
+                  <div key={i} data-sub-section style={{ padding: "6px 0 6px 8px", borderLeft: "3px solid #16a34a", marginBottom: "4px", fontSize: "11px" }}>
+                    {str}
                   </div>
                 ))}
               </div>
               <div>
                 <h3 style={{ fontSize: "12px", fontWeight: 600, color: "#dc2626", marginBottom: "8px" }}>リスク</h3>
                 {analysis.risks.map((r, i) => (
-                  <div key={i} style={{ padding: "6px 0", borderBottom: "1px solid #f3f4f6", fontSize: "11px" }}>
+                  <div key={i} data-sub-section style={{ padding: "6px 0 6px 8px", borderLeft: "3px solid #dc2626", marginBottom: "4px", fontSize: "11px" }}>
                     {r.description}
                   </div>
                 ))}
@@ -354,11 +490,19 @@ const sectionTitle: React.CSSProperties = {
   fontWeight: 700,
   marginBottom: "16px",
   paddingBottom: "8px",
-  borderBottom: "2px solid #e5e7eb",
+  borderBottom: `3px solid ${ACCENT_COLOR}`,
+  color: ACCENT_DARK,
 };
 
 const metricCard: React.CSSProperties = {
   padding: "12px",
   border: "1px solid #e5e7eb",
-  borderRadius: "8px",
+  borderLeft: `3px solid ${ACCENT_COLOR}`,
+  borderRadius: "0 8px 8px 0",
+  background: "#fafafa",
+};
+
+const tdStyle: React.CSSProperties = {
+  padding: "6px",
+  borderBottom: "1px solid #f3f4f6",
 };

@@ -18,6 +18,7 @@ const SECTION_OPTIONS = [
   { key: "cover", label: "表紙" },
   { key: "summary", label: "エグゼクティブサマリー" },
   { key: "metrics", label: "定量メトリクス" },
+  { key: "videos", label: "分析対象動画" },
   { key: "benchmark", label: "カテゴリベンチマーク & オーディエンス" },
   { key: "safety", label: "ブランドセーフティ" },
   { key: "ideas", label: "コラボ企画案" },
