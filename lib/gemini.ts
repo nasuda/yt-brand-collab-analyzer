@@ -1038,16 +1038,35 @@ export async function analyzeBrandFit(
   if (!Array.isArray(raw.collabIdeas) || raw.collabIdeas.length === 0) {
     errors.push("collabIdeas");
   } else {
-    // 個別企画のrequired nested fieldsを検証し、不適合な企画を除外
-    const requiredIdeaFields = ["title", "format", "description", "funnelStage", "riskLevel", "campaignType"] as const;
+    // スキーマの required と一致させた個別企画の検証（不適合な企画を除外）
+    const requiredStringFields = [
+      "title", "format", "description", "expectedImpact", "basedOn", "feasibility",
+      "targetKPI", "brandSafetyNote", "funnelStage", "riskLevel", "campaignType",
+      "creatorPattern", "viewerHook",
+    ] as const;
+    const requiredPostingFields = ["contentDirection", "descriptionBoxSuggestion", "toneAndManner"] as const;
+    const requiredDistributionFields = ["adProduct", "mixStrategy", "audienceTargeting", "budgetAllocation"] as const;
+
     raw.collabIdeas = raw.collabIdeas.filter((idea: unknown) => {
       if (!idea || typeof idea !== "object") return false;
       const r = idea as Record<string, unknown>;
-      for (const field of requiredIdeaFields) {
+      // 全 required string フィールドを検証
+      for (const field of requiredStringFields) {
         if (typeof r[field] !== "string" || !(r[field] as string).trim()) return false;
       }
+      // postingInstruction の required フィールドを検証
       if (!r.postingInstruction || typeof r.postingInstruction !== "object") return false;
+      const pi = r.postingInstruction as Record<string, unknown>;
+      for (const field of requiredPostingFields) {
+        if (typeof pi[field] !== "string") return false;
+      }
+      if (!Array.isArray(pi.keyMessages)) return false;
+      // distributionStrategy の required フィールドを検証
       if (!r.distributionStrategy || typeof r.distributionStrategy !== "object") return false;
+      const ds = r.distributionStrategy as Record<string, unknown>;
+      for (const field of requiredDistributionFields) {
+        if (typeof ds[field] !== "string") return false;
+      }
       return true;
     });
     if (raw.collabIdeas.length === 0) {
@@ -1055,19 +1074,38 @@ export async function analyzeBrandFit(
     }
   }
 
-  // categoryBenchmark / audiencePersona の必須フィールド検証
+  // categoryBenchmark — スキーマの required 全フィールドを検証
   if (!raw.categoryBenchmark || typeof raw.categoryBenchmark !== "object") {
     errors.push("categoryBenchmark");
   } else {
     const cb = raw.categoryBenchmark as Record<string, unknown>;
-    if (typeof cb.channelCategory !== "string") errors.push("categoryBenchmark.channelCategory");
+    const cbRequired = ["channelCategory", "categoryTier", "engagementComparison", "viewEfficiencyComparison"] as const;
+    for (const field of cbRequired) {
+      if (typeof cb[field] !== "string") { errors.push(`categoryBenchmark.${field}`); break; }
+    }
   }
+
+  // audiencePersona — スキーマの required 全フィールドを検証
   if (!raw.audiencePersona || typeof raw.audiencePersona !== "object") {
     errors.push("audiencePersona");
   } else {
     const ap = raw.audiencePersona as Record<string, unknown>;
-    if (typeof ap.estimatedAgeRange !== "string") errors.push("audiencePersona.estimatedAgeRange");
-    if (typeof ap.estimatedGenderSplit !== "string") errors.push("audiencePersona.estimatedGenderSplit");
+    const apRequired = ["estimatedAgeRange", "estimatedGenderSplit", "estimatedRegion", "summary"] as const;
+    for (const field of apRequired) {
+      if (typeof ap[field] !== "string") { errors.push(`audiencePersona.${field}`); break; }
+    }
+    if (!Array.isArray(ap.estimatedInterests)) errors.push("audiencePersona.estimatedInterests");
+  }
+
+  // similarCreators — top-level required, 各要素の required フィールドを検証
+  if (!Array.isArray(raw.similarCreators)) {
+    errors.push("similarCreators");
+  } else {
+    raw.similarCreators = raw.similarCreators.filter((c: unknown): c is Record<string, unknown> => {
+      if (!c || typeof c !== "object") return false;
+      const r = c as Record<string, unknown>;
+      return typeof r.name === "string" && typeof r.handle === "string" && typeof r.reason === "string";
+    });
   }
 
   if (errors.length > 0) {
@@ -1101,44 +1139,37 @@ export async function analyzeBrandFit(
     ? bs.recommendation
     : "条件付き推奨";
 
-  // categoryBenchmark（バリデーション済み — 必須フィールドは検証通過済み）
+  // categoryBenchmark（全 required フィールド検証済み）
   const cb = raw.categoryBenchmark as Record<string, unknown>;
   const categoryBenchmark = {
     channelCategory: cb.channelCategory as string,
-    categoryTier: typeof cb.categoryTier === "string" ? cb.categoryTier : "データ不足",
-    engagementComparison: typeof cb.engagementComparison === "string" ? cb.engagementComparison : "データ不足",
-    viewEfficiencyComparison: typeof cb.viewEfficiencyComparison === "string" ? cb.viewEfficiencyComparison : "データ不足",
+    categoryTier: cb.categoryTier as string,
+    engagementComparison: cb.engagementComparison as string,
+    viewEfficiencyComparison: cb.viewEfficiencyComparison as string,
   };
 
-  // audiencePersona（バリデーション済み — 必須フィールドは検証通過済み）
+  // audiencePersona（全 required フィールド検証済み）
   const ap = raw.audiencePersona as Record<string, unknown>;
   const audiencePersona = {
     estimatedAgeRange: ap.estimatedAgeRange as string,
     estimatedGenderSplit: ap.estimatedGenderSplit as string,
-    estimatedInterests: Array.isArray(ap.estimatedInterests)
-      ? ap.estimatedInterests.filter((i: unknown) => typeof i === "string")
-      : [],
-    estimatedRegion: typeof ap.estimatedRegion === "string" ? ap.estimatedRegion : "不明",
-    summary: typeof ap.summary === "string" ? ap.summary : "",
+    estimatedInterests: (ap.estimatedInterests as unknown[]).filter((i: unknown) => typeof i === "string"),
+    estimatedRegion: ap.estimatedRegion as string,
+    summary: ap.summary as string,
   };
 
-  // similarCreators のフォールバック付き抽出
-  const similarCreators = Array.isArray(raw.similarCreators)
-    ? raw.similarCreators
-        .filter((c: unknown): c is Record<string, unknown> =>
-          !!c && typeof c === "object" && typeof (c as Record<string, unknown>).name === "string"
-        )
-        .map((c: Record<string, unknown>) => ({
-          name: c.name as string,
-          handle: typeof c.handle === "string" ? c.handle : "",
-          reason: typeof c.reason === "string" ? c.reason : "",
-        }))
-    : [];
+  // similarCreators（検証済み — 不適合要素はフィルタ済み）
+  const similarCreators = (raw.similarCreators as Record<string, unknown>[]).map((c) => ({
+    name: c.name as string,
+    handle: c.handle as string,
+    reason: c.reason as string,
+  }));
 
-  // CollabIdea の新フィールド用バリデーション
-  const validFunnelStages = ["認知", "検討", "獲得"] as const;
-  const validRiskLevels = ["安全策", "標準", "挑戦的"] as const;
-  const validCampaignTypes = ["単発", "シリーズ", "キャンペーン"] as const;
+  // CollabIdea の enum バリデーション定数
+  const validFeasibilities: readonly string[] = ["低", "中", "高"];
+  const validFunnelStages: readonly string[] = ["認知", "検討", "獲得"];
+  const validRiskLevels: readonly string[] = ["安全策", "標準", "挑戦的"];
+  const validCampaignTypes: readonly string[] = ["単発", "シリーズ", "キャンペーン"];
 
   const result: BrandFitAnalysis = {
     overallScore: Math.max(0, Math.min(100, computedTotal)),
@@ -1179,41 +1210,38 @@ export async function analyzeBrandFit(
               }))
           : [],
       })),
-    collabIdeas: raw.collabIdeas
-      .filter((idea: unknown): idea is Record<string, unknown> =>
-        !!idea && typeof idea === "object" &&
-        typeof (idea as Record<string, unknown>).title === "string"
-      )
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .map((idea: Record<string, any>) => ({
-        title: idea.title,
-        format: idea.format || "不明",
-        description: idea.description || "",
-        expectedImpact: idea.expectedImpact || "",
-        basedOn: idea.basedOn || "",
-        feasibility: (["低", "中", "高"].includes(idea.feasibility) ? idea.feasibility : "中") as "低" | "中" | "高",
-        targetKPI: idea.targetKPI || "",
-        brandSafetyNote: idea.brandSafetyNote || "特になし",
-        funnelStage: (validFunnelStages.includes(idea.funnelStage) ? idea.funnelStage : "認知") as typeof validFunnelStages[number],
-        riskLevel: (validRiskLevels.includes(idea.riskLevel) ? idea.riskLevel : "標準") as typeof validRiskLevels[number],
-        campaignType: (validCampaignTypes.includes(idea.campaignType) ? idea.campaignType : "単発") as typeof validCampaignTypes[number],
-        creatorPattern: idea.creatorPattern || "",
-        viewerHook: idea.viewerHook || "",
+    // collabIdeas（全 required フィールド検証済み — フィルタ済み配列を直接マッピング）
+    collabIdeas: (raw.collabIdeas as Record<string, unknown>[]).map((idea) => {
+      const pi = idea.postingInstruction as Record<string, unknown>;
+      const ds = idea.distributionStrategy as Record<string, unknown>;
+      return {
+        title: idea.title as string,
+        format: idea.format as string,
+        description: idea.description as string,
+        expectedImpact: idea.expectedImpact as string,
+        basedOn: idea.basedOn as string,
+        feasibility: (validFeasibilities.includes(idea.feasibility as string) ? idea.feasibility as string : "中") as "低" | "中" | "高",
+        targetKPI: idea.targetKPI as string,
+        brandSafetyNote: idea.brandSafetyNote as string,
+        funnelStage: (validFunnelStages.includes(idea.funnelStage as string) ? idea.funnelStage as string : "認知") as "認知" | "検討" | "獲得",
+        riskLevel: (validRiskLevels.includes(idea.riskLevel as string) ? idea.riskLevel as string : "標準") as "安全策" | "標準" | "挑戦的",
+        campaignType: (validCampaignTypes.includes(idea.campaignType as string) ? idea.campaignType as string : "単発") as "単発" | "シリーズ" | "キャンペーン",
+        creatorPattern: idea.creatorPattern as string,
+        viewerHook: idea.viewerHook as string,
         postingInstruction: {
-          contentDirection: idea.postingInstruction?.contentDirection || "",
-          descriptionBoxSuggestion: idea.postingInstruction?.descriptionBoxSuggestion || "",
-          keyMessages: Array.isArray(idea.postingInstruction?.keyMessages)
-            ? idea.postingInstruction.keyMessages.filter((m: unknown) => typeof m === "string")
-            : [],
-          toneAndManner: idea.postingInstruction?.toneAndManner || "",
+          contentDirection: pi.contentDirection as string,
+          descriptionBoxSuggestion: pi.descriptionBoxSuggestion as string,
+          keyMessages: (pi.keyMessages as unknown[]).filter((m: unknown) => typeof m === "string") as string[],
+          toneAndManner: pi.toneAndManner as string,
         },
         distributionStrategy: {
-          adProduct: idea.distributionStrategy?.adProduct || "",
-          mixStrategy: idea.distributionStrategy?.mixStrategy || "",
-          audienceTargeting: idea.distributionStrategy?.audienceTargeting || "",
-          budgetAllocation: idea.distributionStrategy?.budgetAllocation || "",
+          adProduct: ds.adProduct as string,
+          mixStrategy: ds.mixStrategy as string,
+          audienceTargeting: ds.audienceTargeting as string,
+          budgetAllocation: ds.budgetAllocation as string,
         },
-      })),
+      };
+    }),
     categoryBenchmark,
     audiencePersona,
     similarCreators,
