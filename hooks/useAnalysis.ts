@@ -24,6 +24,10 @@ const LOADING_STEPS: Record<ResearchMode, string[]> = {
   "deep-research": [
     "Deep Researchを開始中...",
     "AIがクリエイターを徹底調査中...",
+    "コメントを分析中...",
+    "コンテンツパターンを解析中...",
+    "アイデアスケッチを生成中...",
+    "調査結果をもとにブランド適合性を分析中...",
   ],
   "custom-research": [
     "チャンネル情報を取得中...",

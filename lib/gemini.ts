@@ -123,12 +123,12 @@ const responseSchema = {
           description: { type: Type.STRING, description: "企画の詳細説明。クリエイターならではの切り口、ブランド要素の組み込み方、視聴者が惹きつけられるポイントを含む" },
           expectedImpact: { type: Type.STRING, description: "ブランドの課題・KPIに対してこの企画がどう貢献するか" },
           basedOn: { type: Type.STRING, description: "着想元となった既存動画・コンテンツパターン" },
-          feasibility: { type: Type.STRING, description: "実現難易度: '低' / '中' / '高'" },
+          feasibility: { type: Type.STRING, enum: ["低", "中", "高"], description: "実現難易度" },
           targetKPI: { type: Type.STRING, description: "この企画が最も効く指標と、ブランドのKPIとの接続（例: 「検証動画の高い完視聴率→ブランド認知の定着に貢献」）" },
           brandSafetyNote: { type: Type.STRING, description: "ブランドセーフティ上の留意点" },
-          funnelStage: { type: Type.STRING, description: "ファネル段階: '認知' / '検討' / '獲得' のいずれか" },
-          riskLevel: { type: Type.STRING, description: "リスクレベル: '安全策' / '標準' / '挑戦的' のいずれか" },
-          campaignType: { type: Type.STRING, description: "規模: '単発' / 'シリーズ' / 'キャンペーン' のいずれか" },
+          funnelStage: { type: Type.STRING, enum: ["認知", "検討", "獲得"], description: "ファネル段階" },
+          riskLevel: { type: Type.STRING, enum: ["安全策", "標準", "挑戦的"], description: "リスクレベル" },
+          campaignType: { type: Type.STRING, enum: ["単発", "シリーズ", "キャンペーン"], description: "規模" },
           creatorPattern: { type: Type.STRING, description: "使用するクリエイターの「型」（例: 検証系、ランキング、ルーティン等）" },
           viewerHook: { type: Type.STRING, description: "視聴者を惹きつける仕掛け（例: 「結果が気になる」「参加感」「驚き」等）" },
           postingInstruction: {
@@ -1035,7 +1035,23 @@ export async function analyzeBrandFit(
       errors.push("risks (全要素がスキーマ不適合)");
     }
   }
-  if (!Array.isArray(raw.collabIdeas) || raw.collabIdeas.length === 0) errors.push("collabIdeas");
+  if (!Array.isArray(raw.collabIdeas) || raw.collabIdeas.length === 0) {
+    errors.push("collabIdeas");
+  } else {
+    // ネスト必須フィールドの検証: postingInstruction / distributionStrategy が欠損していたらfail
+    const malformedIdeas = raw.collabIdeas.filter(
+      (idea: unknown) => {
+        if (!idea || typeof idea !== "object") return true;
+        const r = idea as Record<string, unknown>;
+        if (!r.postingInstruction || typeof r.postingInstruction !== "object") return true;
+        if (!r.distributionStrategy || typeof r.distributionStrategy !== "object") return true;
+        return false;
+      }
+    );
+    if (malformedIdeas.length === raw.collabIdeas.length) {
+      errors.push("collabIdeas (全企画で postingInstruction/distributionStrategy が欠損)");
+    }
+  }
 
   if (errors.length > 0) {
     throw new Error(`Geminiの応答が不完全です（欠落フィールド: ${errors.join(", ")}）`);
