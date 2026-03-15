@@ -4,7 +4,7 @@ import { useState } from "react";
 import { CollabIdea } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Lightbulb, Sparkles, Target, Shield, Zap, FileEdit, Megaphone, ChevronDown, ChevronRight } from "lucide-react";
+import { Lightbulb, Sparkles, Target, Shield, Zap, FileEdit, Megaphone, ChevronDown, ChevronRight, Users, Eye } from "lucide-react";
 
 interface CollabIdeasProps {
   ideas: CollabIdea[];
@@ -15,6 +15,33 @@ function getFeasibilityStyle(f: string) {
     case "低": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
     case "中": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
     case "高": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+    default: return "";
+  }
+}
+
+function getFunnelStyle(stage: string) {
+  switch (stage) {
+    case "認知": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+    case "検討": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
+    case "獲得": return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
+    default: return "";
+  }
+}
+
+function getRiskLevelStyle(level: string) {
+  switch (level) {
+    case "安全策": return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200";
+    case "標準": return "bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-200";
+    case "挑戦的": return "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200";
+    default: return "";
+  }
+}
+
+function getCampaignTypeStyle(type: string) {
+  switch (type) {
+    case "単発": return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+    case "シリーズ": return "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200";
+    case "キャンペーン": return "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200";
     default: return "";
   }
 }
@@ -74,7 +101,40 @@ export function CollabIdeas({ ideas }: CollabIdeasProps) {
                 </div>
               </div>
 
+              {/* 新フィールドバッジ */}
+              <div className="flex flex-wrap gap-1.5">
+                {idea.funnelStage && (
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${getFunnelStyle(idea.funnelStage)}`}>
+                    {idea.funnelStage}
+                  </span>
+                )}
+                {idea.riskLevel && (
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${getRiskLevelStyle(idea.riskLevel)}`}>
+                    {idea.riskLevel}
+                  </span>
+                )}
+                {idea.campaignType && (
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${getCampaignTypeStyle(idea.campaignType)}`}>
+                    {idea.campaignType}
+                  </span>
+                )}
+              </div>
+
               <p className="text-sm text-muted-foreground">{idea.description}</p>
+
+              {idea.creatorPattern && (
+                <div className="flex items-start gap-1.5 text-sm">
+                  <Users className="h-3 w-3 text-teal-500 mt-0.5 shrink-0" />
+                  <span><span className="text-teal-500 font-medium">クリエイターの型:</span> <span className="text-muted-foreground">{idea.creatorPattern}</span></span>
+                </div>
+              )}
+
+              {idea.viewerHook && (
+                <div className="flex items-start gap-1.5 text-sm">
+                  <Eye className="h-3 w-3 text-pink-500 mt-0.5 shrink-0" />
+                  <span><span className="text-pink-500 font-medium">視聴者フック:</span> <span className="text-muted-foreground">{idea.viewerHook}</span></span>
+                </div>
+              )}
 
               {idea.basedOn && (
                 <div className="flex items-start gap-1.5 text-sm">

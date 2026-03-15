@@ -423,11 +423,33 @@ export const PrintableReport = forwardRef<HTMLDivElement, PrintableReportProps>(
                     実現性: {idea.feasibility}
                   </span>
                 </div>
+
+                {/* 新フィールドバッジ */}
+                <div style={{ display: "flex", gap: "6px", marginBottom: "8px", flexWrap: "wrap" }}>
+                  {idea.funnelStage && (
+                    <span style={{ padding: "2px 8px", borderRadius: "12px", background: "#dbeafe", fontSize: "10px", color: "#1e40af" }}>
+                      {idea.funnelStage}
+                    </span>
+                  )}
+                  {idea.riskLevel && (
+                    <span style={{ padding: "2px 8px", borderRadius: "12px", background: "#f1f5f9", fontSize: "10px", color: "#475569" }}>
+                      {idea.riskLevel}
+                    </span>
+                  )}
+                  {idea.campaignType && (
+                    <span style={{ padding: "2px 8px", borderRadius: "12px", background: "#fef3c7", fontSize: "10px", color: "#92400e" }}>
+                      {idea.campaignType}
+                    </span>
+                  )}
+                </div>
+
                 <p style={{ fontSize: "11px", marginBottom: "8px" }}>{idea.description}</p>
                 <div style={{ fontSize: "10px", color: "#6b7280" }}>
                   <p><strong>期待効果:</strong> {idea.expectedImpact}</p>
                   <p><strong>KPI:</strong> {idea.targetKPI}</p>
                   <p><strong>着想元:</strong> {idea.basedOn}</p>
+                  {idea.creatorPattern && <p><strong>クリエイターの型:</strong> {idea.creatorPattern}</p>}
+                  {idea.viewerHook && <p><strong>視聴者フック:</strong> {idea.viewerHook}</p>}
                 </div>
 
                 {/* 投稿指示書 */}

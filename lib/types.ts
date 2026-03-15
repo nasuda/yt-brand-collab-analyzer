@@ -1,5 +1,23 @@
 export type ResearchMode = "basic" | "search" | "deep-research" | "custom-research";
 
+export interface ModelConfig {
+  analysisModel: string;
+  researchModel: string;
+  helperModel: string;
+}
+
+export const AVAILABLE_MODELS = [
+  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", description: "高速・低コスト" },
+  { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", description: "高性能・バランス" },
+  { id: "gemini-3.1-pro-preview", label: "Gemini 3.1 Pro", description: "最新・最高品質" },
+] as const;
+
+export const DEFAULT_MODEL_CONFIG: ModelConfig = {
+  analysisModel: "gemini-2.5-flash",
+  researchModel: "gemini-2.5-flash",
+  helperModel: "gemini-2.5-flash",
+};
+
 export interface AnalysisRequest {
   channelInput: string;
   brandName: string;
@@ -81,6 +99,10 @@ export interface DistributionStrategy {
   budgetAllocation: string;        // 予算配分の方向性
 }
 
+export type FunnelStage = "認知" | "検討" | "獲得";
+export type RiskLevel = "安全策" | "標準" | "挑戦的";
+export type CampaignType = "単発" | "シリーズ" | "キャンペーン";
+
 export interface CollabIdea {
   title: string;
   format: string;
@@ -92,6 +114,11 @@ export interface CollabIdea {
   brandSafetyNote: string;
   postingInstruction: PostingInstruction;
   distributionStrategy: DistributionStrategy;
+  funnelStage: FunnelStage;
+  riskLevel: RiskLevel;
+  campaignType: CampaignType;
+  creatorPattern: string;
+  viewerHook: string;
 }
 
 export interface CategoryBenchmark {
@@ -171,4 +198,33 @@ export interface AnalysisState {
   error: string | null;
   loadingStep: string;
   mode: "single" | "compare";
+}
+
+// Phase B types
+export interface CommentAnalysis {
+  topTopics: string[];
+  sentimentSummary: string;
+  engagementDrivers: string[];
+  frequentRequests: string[];
+}
+
+export interface ContentPatternType {
+  type: string;
+  examples: string[];
+  frequency: string;
+}
+
+export interface ContentPatternAnalysis {
+  contentTypes: ContentPatternType[];
+  bestPerformingType: string;
+  signatureElements: string[];
+  collaborationHistory: string;
+}
+
+export interface IdeaSketch {
+  title: string;
+  format: string;
+  funnelStage: string;
+  oneLiner: string;
+  basedOn: string;
 }

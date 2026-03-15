@@ -2,13 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateAnalysisRequest } from "@/lib/validators";
 import { resolveChannel, getVideos, getVideoComments } from "@/lib/youtube";
 import { computeMetrics } from "@/lib/metrics";
-import { startDeepResearch, pollDeepResearch, performResearch, analyzeBrandFit, sanitizeResearch } from "@/lib/gemini";
+import {
+  startDeepResearch, pollDeepResearch, performResearch,
+  analyzeBrandFit, sanitizeResearch,
+  analyzeComments, analyzeContentPatterns, generateIdeaSketches,
+  DEFAULT_MODEL_CONFIG,
+} from "@/lib/gemini";
+import type { ModelConfig } from "@/lib/types";
 
 // POST: Deep Research を開始し、interactionId + YouTube データを返す
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { action } = body as { action?: string };
+    const modelConfig: ModelConfig = body.modelConfig || DEFAULT_MODEL_CONFIG;
 
     if (action === "poll") {
       // --- ポーリング: interactionId の状態を確認 ---
@@ -40,13 +47,30 @@ export async function POST(request: NextRequest) {
       const comments = await getVideoComments(videos.map((v) => v.id));
       const metrics = computeMetrics(channel, videos, latestVideos);
 
+      // Pre-analysis
+      const [commentAnalysis, contentPatterns] = await Promise.all([
+        analyzeComments(comments, modelConfig.helperModel),
+        analyzeContentPatterns(videos, modelConfig.helperModel),
+      ]);
+
+      const ideaSketches = await generateIdeaSketches(
+        channel, videos, brandName, brandDescription,
+        commentAnalysis, contentPatterns,
+        modelConfig.helperModel,
+      );
+
       const analysis = await analyzeBrandFit(
         channel,
         videos,
         comments,
         brandName,
         brandDescription,
-        sanitizedResearch
+        sanitizedResearch,
+        modelConfig.analysisModel,
+        metrics,
+        commentAnalysis,
+        contentPatterns,
+        ideaSketches,
       );
 
       return NextResponse.json({
@@ -73,7 +97,7 @@ export async function POST(request: NextRequest) {
 
     if (!interactionId) {
       // Deep Research API 非対応 → Google Search にフォールバック
-      const fallbackResearch = await performResearch("search", channel, brandName);
+      const fallbackResearch = await performResearch("search", channel, brandName, modelConfig.researchModel);
       return NextResponse.json({
         fallback: true,
         creatorResearch: fallbackResearch,

@@ -1,17 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { ResearchMode } from "@/lib/types";
+import { ResearchMode, ModelConfig, AVAILABLE_MODELS, DEFAULT_MODEL_CONFIG } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, Zap, Globe, BookOpen, FileText, Plus, X, GitCompareArrows } from "lucide-react";
+import { Search, Zap, Globe, BookOpen, FileText, Plus, X, GitCompareArrows, ChevronDown, ChevronRight, Settings2 } from "lucide-react";
 
 interface AnalysisFormProps {
-  onSubmit: (channelInput: string, brandName: string, brandDescription?: string, researchMode?: ResearchMode, creatorResearch?: string) => void;
-  onCompare: (channels: string[], brandName: string, brandDescription?: string, researchMode?: ResearchMode) => void;
+  onSubmit: (channelInput: string, brandName: string, brandDescription?: string, researchMode?: ResearchMode, creatorResearch?: string, modelConfig?: ModelConfig) => void;
+  onCompare: (channels: string[], brandName: string, brandDescription?: string, researchMode?: ResearchMode, modelConfig?: ModelConfig) => void;
   isLoading: boolean;
 }
 
@@ -45,6 +45,36 @@ const MODES: { value: ResearchMode; label: string; description: string; icon: Re
   },
 ];
 
+function ModelSelect({
+  label,
+  value,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  disabled: boolean;
+}) {
+  return (
+    <div className="space-y-1">
+      <label className="text-xs text-muted-foreground">{label}</label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {AVAILABLE_MODELS.map((m) => (
+          <option key={m.id} value={m.id}>
+            {m.label} — {m.description}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 export function AnalysisForm({ onSubmit, onCompare, isLoading }: AnalysisFormProps) {
   const [isCompareMode, setIsCompareMode] = useState(false);
   const [channelInput, setChannelInput] = useState("");
@@ -53,6 +83,8 @@ export function AnalysisForm({ onSubmit, onCompare, isLoading }: AnalysisFormPro
   const [brandDescription, setBrandDescription] = useState("");
   const [researchMode, setResearchMode] = useState<ResearchMode>("basic");
   const [customResearch, setCustomResearch] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [modelConfig, setModelConfig] = useState<ModelConfig>({ ...DEFAULT_MODEL_CONFIG });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +95,7 @@ export function AnalysisForm({ onSubmit, onCompare, isLoading }: AnalysisFormPro
       const normalized = validChannels.map((c) => c.trim().toLowerCase());
       const uniqueChannels = validChannels.filter((_, i) => normalized.indexOf(normalized[i]) === i);
       if (uniqueChannels.length < 2 || !brandName.trim()) return;
-      onCompare(uniqueChannels, brandName.trim(), brandDescription.trim() || undefined, researchMode);
+      onCompare(uniqueChannels, brandName.trim(), brandDescription.trim() || undefined, researchMode, modelConfig);
     } else {
       if (!channelInput.trim() || !brandName.trim()) return;
       if (researchMode === "custom-research" && !customResearch.trim()) return;
@@ -72,7 +104,8 @@ export function AnalysisForm({ onSubmit, onCompare, isLoading }: AnalysisFormPro
         brandName.trim(),
         brandDescription.trim() || undefined,
         researchMode,
-        researchMode === "custom-research" ? customResearch.trim() : undefined
+        researchMode === "custom-research" ? customResearch.trim() : undefined,
+        modelConfig,
       );
     }
   };
@@ -289,6 +322,41 @@ export function AnalysisForm({ onSubmit, onCompare, isLoading }: AnalysisFormPro
               </p>
             </div>
           )}
+
+          {/* 詳細設定（モデル選択） */}
+          <div className="border rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent/50 transition-colors"
+            >
+              {showAdvanced ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              <Settings2 className="h-4 w-4" />
+              詳細設定
+            </button>
+            {showAdvanced && (
+              <div className="px-3 py-3 space-y-3 border-t">
+                <ModelSelect
+                  label="分析モデル（ブランド適合性評価）"
+                  value={modelConfig.analysisModel}
+                  onChange={(v) => setModelConfig((prev) => ({ ...prev, analysisModel: v }))}
+                  disabled={isLoading}
+                />
+                <ModelSelect
+                  label="リサーチモデル（Web検索・比較サマリー）"
+                  value={modelConfig.researchModel}
+                  onChange={(v) => setModelConfig((prev) => ({ ...prev, researchModel: v }))}
+                  disabled={isLoading}
+                />
+                <ModelSelect
+                  label="補助モデル（プリ分析・アイデアスケッチ）"
+                  value={modelConfig.helperModel}
+                  onChange={(v) => setModelConfig((prev) => ({ ...prev, helperModel: v }))}
+                  disabled={isLoading}
+                />
+              </div>
+            )}
+          </div>
 
           <Button
             type="submit"

@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import { AnalysisState, AnalysisResult, ComparisonResult, ComparisonError, ResearchMode } from "@/lib/types";
+import { AnalysisState, AnalysisResult, ComparisonResult, ComparisonError, ResearchMode, ModelConfig } from "@/lib/types";
 
 const LOADING_STEPS: Record<ResearchMode, string[]> = {
   basic: [
     "チャンネル情報を取得中...",
     "動画データを収集中...",
     "コメントを分析中...",
+    "コンテンツパターンを解析中...",
+    "アイデアスケッチを生成中...",
     "AIがブランド適合性を評価中...",
   ],
   search: [
@@ -15,6 +17,8 @@ const LOADING_STEPS: Record<ResearchMode, string[]> = {
     "動画データを収集中...",
     "Google検索でクリエイター情報を調査中...",
     "コメントを分析中...",
+    "コンテンツパターンを解析中...",
+    "アイデアスケッチを生成中...",
     "AIがブランド適合性を評価中...",
   ],
   "deep-research": [
@@ -25,6 +29,8 @@ const LOADING_STEPS: Record<ResearchMode, string[]> = {
     "チャンネル情報を取得中...",
     "動画データを収集中...",
     "コメントを分析中...",
+    "コンテンツパターンを解析中...",
+    "アイデアスケッチを生成中...",
     "添付レポートをもとにAIが分析中...",
   ],
 };
@@ -78,7 +84,8 @@ export function useAnalysis() {
     brandName: string,
     brandDescription: string | undefined,
     researchMode: ResearchMode,
-    creatorResearch?: string
+    creatorResearch?: string,
+    modelConfig?: ModelConfig,
   ) => {
     const steps = LOADING_STEPS[researchMode];
     let stepIndex = 0;
@@ -91,7 +98,7 @@ export function useAnalysis() {
 
     try {
       const { ok, data } = await postJSON("/api/analyze", {
-        channelInput, brandName, brandDescription, researchMode, creatorResearch,
+        channelInput, brandName, brandDescription, researchMode, creatorResearch, modelConfig,
       });
       clearInterval(stepTimer);
 
@@ -111,12 +118,13 @@ export function useAnalysis() {
     channelInput: string,
     brandName: string,
     brandDescription: string | undefined,
+    modelConfig?: ModelConfig,
   ) => {
     // Step 1: Deep Research を開始
     setState((prev) => ({ ...prev, loadingStep: "Deep Researchを開始中..." }));
 
     const { ok: startOk, data: startData } = await postJSON("/api/deep-research", {
-      channelInput, brandName, brandDescription,
+      channelInput, brandName, brandDescription, modelConfig,
     });
 
     if (!startOk) {
@@ -132,6 +140,7 @@ export function useAnalysis() {
         action: "analyze",
         channelInput, brandName, brandDescription,
         creatorResearch: startData.creatorResearch,
+        modelConfig,
       });
       if (!ok) {
         setError((data.error as string) || "分析に失敗しました");
@@ -203,6 +212,7 @@ export function useAnalysis() {
       action: "analyze",
       channelInput, brandName, brandDescription,
       creatorResearch,
+      modelConfig,
     });
 
     if (!analyzeOk) {
@@ -218,7 +228,8 @@ export function useAnalysis() {
     channels: string[],
     brandName: string,
     brandDescription?: string,
-    researchMode: ResearchMode = "basic"
+    researchMode: ResearchMode = "basic",
+    modelConfig?: ModelConfig,
   ) => {
     const total = channels.length;
 
@@ -241,6 +252,7 @@ export function useAnalysis() {
         brandName,
         brandDescription,
         researchMode: researchMode === "deep-research" ? "basic" : researchMode,
+        modelConfig,
       });
 
       clearInterval(progressTimer);
@@ -267,7 +279,8 @@ export function useAnalysis() {
       brandName: string,
       brandDescription?: string,
       researchMode: ResearchMode = "basic",
-      creatorResearch?: string
+      creatorResearch?: string,
+      modelConfig?: ModelConfig,
     ) => {
       abortRef.current = false;
 
@@ -280,9 +293,9 @@ export function useAnalysis() {
 
       try {
         if (researchMode === "deep-research") {
-          await analyzeDeepResearch(channelInput, brandName, brandDescription);
+          await analyzeDeepResearch(channelInput, brandName, brandDescription, modelConfig);
         } else {
-          await analyzeStandard(channelInput, brandName, brandDescription, researchMode, creatorResearch);
+          await analyzeStandard(channelInput, brandName, brandDescription, researchMode, creatorResearch, modelConfig);
         }
       } catch {
         setState((prev) =>
@@ -300,7 +313,8 @@ export function useAnalysis() {
       channels: string[],
       brandName: string,
       brandDescription?: string,
-      researchMode: ResearchMode = "basic"
+      researchMode: ResearchMode = "basic",
+      modelConfig?: ModelConfig,
     ) => {
       abortRef.current = false;
 
@@ -312,7 +326,7 @@ export function useAnalysis() {
       });
 
       try {
-        await analyzeCompare(channels, brandName, brandDescription, researchMode);
+        await analyzeCompare(channels, brandName, brandDescription, researchMode, modelConfig);
       } catch {
         setState((prev) =>
           prev.status === "loading"
