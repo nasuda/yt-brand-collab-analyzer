@@ -1,13 +1,14 @@
 "use client";
 
 import { forwardRef } from "react";
-import { CollabIdea, CampaignOverview } from "@/lib/types";
+import { CampaignOverview, CampaignRules } from "@/lib/types";
 
 export interface CreatorBriefProps {
   brandName: string;
   channelName: string;
-  idea: CollabIdea;
   campaignOverview?: CampaignOverview;
+  campaignRules?: CampaignRules;
+  brandAlignmentReasoning: string;
 }
 
 const ACCENT = "#4f46e5";
@@ -45,8 +46,7 @@ const listItem: React.CSSProperties = {
 };
 
 export const CreatorBriefReport = forwardRef<HTMLDivElement, CreatorBriefProps>(
-  function CreatorBriefReport({ brandName, channelName, idea, campaignOverview }, ref) {
-    const pi = idea.postingInstruction;
+  function CreatorBriefReport({ brandName, channelName, campaignOverview, campaignRules, brandAlignmentReasoning }, ref) {
     const today = new Date().toLocaleDateString("ja-JP", {
       year: "numeric",
       month: "long",
@@ -66,11 +66,7 @@ export const CreatorBriefReport = forwardRef<HTMLDivElement, CreatorBriefProps>(
         }}
       >
         {/* ヘッダー */}
-        <div
-          data-section="header"
-          style={{ padding: "15mm 20mm 10mm" }}
-        >
-          {/* アクセントバー */}
+        <div data-section="header" style={{ padding: "15mm 20mm 10mm" }}>
           <div
             style={{
               position: "absolute",
@@ -81,42 +77,41 @@ export const CreatorBriefReport = forwardRef<HTMLDivElement, CreatorBriefProps>(
               background: `linear-gradient(90deg, ${ACCENT}, #7c3aed)`,
             }}
           />
-
           <div style={{ fontSize: "10px", color: "#6b7280", letterSpacing: "0.1em", marginBottom: "8px" }}>
             CREATOR COLLABORATION BRIEF
           </div>
           <div style={{ fontSize: "22px", fontWeight: 700, color: ACCENT_DARK, marginBottom: "4px" }}>
-            {idea.title}
+            {brandName} × {channelName}
           </div>
           <div style={{ fontSize: "13px", color: "#6b7280", marginBottom: "12px" }}>
-            {brandName} × {channelName}
+            コラボレーションブリーフ
           </div>
           <div style={{ display: "flex", gap: "16px", fontSize: "10px", color: "#9ca3af" }}>
             <span>作成日: {today}</span>
-            <span>フォーマット: {idea.format}</span>
           </div>
         </div>
 
-        {/* クリエイターコンテキスト — なぜあなたか */}
-        {pi.creatorContext && (
-          <div data-section="context" style={{ padding: "8mm 20mm" }}>
-            <div
-              style={{
-                padding: "14px 16px",
-                background: "#fffbeb",
-                borderLeft: `4px solid #f59e0b`,
-                borderRadius: "0 8px 8px 0",
-              }}
-            >
-              <div style={{ fontSize: "12px", fontWeight: 600, color: "#92400e", marginBottom: "6px" }}>
-                この企画をあなたにお願いしたい理由
-              </div>
-              <p style={{ fontSize: "11px", color: "#78350f", lineHeight: 1.7 }}>
-                {pi.creatorContext}
-              </p>
+        {/* スタンスの明示 */}
+        <div data-section="stance" style={{ padding: "6mm 20mm" }}>
+          <div
+            style={{
+              padding: "14px 16px",
+              background: "#f0fdf4",
+              borderLeft: "4px solid #22c55e",
+              borderRadius: "0 8px 8px 0",
+            }}
+          >
+            <div style={{ fontSize: "12px", fontWeight: 600, color: "#15803d", marginBottom: "6px" }}>
+              このブリーフについて
             </div>
+            <p style={{ fontSize: "11px", color: "#166534", lineHeight: 1.7 }}>
+              本ブリーフはコラボレーションの方向性をお伝えするためのガイドです。
+              最終的な企画・構成は {channelName} 様の世界観と判断にお任せします。
+              「投稿指示書」として最低限お守りいただきたい事項をまとめておりますので、
+              そちらをご確認のうえ、自由にコンテンツをご制作ください。
+            </p>
           </div>
-        )}
+        </div>
 
         {/* 施策概要 */}
         {campaignOverview && (
@@ -143,44 +138,52 @@ export const CreatorBriefReport = forwardRef<HTMLDivElement, CreatorBriefProps>(
           </div>
         )}
 
-        {/* 企画概要 */}
-        <div data-section="idea" style={{ padding: "8mm 20mm" }}>
-          <h2 style={sectionTitle}>企画概要</h2>
-          <p style={valueStyle}>{idea.description}</p>
-        </div>
-
-        {/* 構成ガイド */}
-        {pi.contentDirection && (
-          <div data-section="direction" style={{ padding: "8mm 20mm" }}>
-            <h2 style={sectionTitle}>構成ガイド</h2>
-            <p style={{ fontSize: "11px", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
-              {pi.contentDirection}
-            </p>
+        {/* なぜあなたか */}
+        {brandAlignmentReasoning && (
+          <div data-section="why-you" style={{ padding: "8mm 20mm" }}>
+            <div
+              style={{
+                padding: "14px 16px",
+                background: "#fffbeb",
+                borderLeft: "4px solid #f59e0b",
+                borderRadius: "0 8px 8px 0",
+              }}
+            >
+              <div style={{ fontSize: "12px", fontWeight: 600, color: "#92400e", marginBottom: "6px" }}>
+                {channelName} 様にお声がけした理由
+              </div>
+              <p style={{ fontSize: "11px", color: "#78350f", lineHeight: 1.7 }}>
+                {brandAlignmentReasoning}
+              </p>
+            </div>
           </div>
         )}
 
-        {/* ブランド必須 / NG */}
-        {(pi.brandMustDo?.length > 0 || pi.brandMustNot?.length > 0) && (
-          <div data-section="requirements" style={{ padding: "8mm 20mm" }}>
-            <h2 style={sectionTitle}>ブランド要件</h2>
+        {/* 投稿指示書（共通ルール） */}
+        {campaignRules && (campaignRules.universalMustDo.length > 0 || campaignRules.universalMustNot.length > 0) && (
+          <div data-section="posting-rules" style={{ padding: "8mm 20mm" }}>
+            <h2 style={sectionTitle}>投稿指示書</h2>
+            <p style={{ ...valueStyle, color: "#6b7280", marginBottom: "12px" }}>
+              全コンテンツに共通して適用されるルールです。企画の内容に関わらず、必ずお守りください。
+            </p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-              {pi.brandMustDo?.length > 0 && (
+              {campaignRules.universalMustDo.length > 0 && (
                 <div>
                   <div style={{ fontSize: "11px", fontWeight: 600, color: "#166534", marginBottom: "6px" }}>
                     必須要件
                   </div>
-                  {pi.brandMustDo.map((item, i) => (
-                    <div key={i} data-sub-section style={listItem}>&#x2713; {item}</div>
+                  {campaignRules.universalMustDo.map((item, i) => (
+                    <div key={i} style={listItem}>&#x2713; {item}</div>
                   ))}
                 </div>
               )}
-              {pi.brandMustNot?.length > 0 && (
+              {campaignRules.universalMustNot.length > 0 && (
                 <div>
                   <div style={{ fontSize: "11px", fontWeight: 600, color: "#991b1b", marginBottom: "6px" }}>
                     NG事項
                   </div>
-                  {pi.brandMustNot.map((item, i) => (
-                    <div key={i} data-sub-section style={listItem}>&#x2717; {item}</div>
+                  {campaignRules.universalMustNot.map((item, i) => (
+                    <div key={i} style={listItem}>&#x2717; {item}</div>
                   ))}
                 </div>
               )}
@@ -188,75 +191,18 @@ export const CreatorBriefReport = forwardRef<HTMLDivElement, CreatorBriefProps>(
           </div>
         )}
 
-        {/* クリエイターの自由裁量 */}
-        {pi.creatorFreedom?.length > 0 && (
-          <div data-section="freedom" style={{ padding: "8mm 20mm" }}>
-            <h2 style={sectionTitle}>あなたにお任せする部分</h2>
-            {pi.creatorFreedom.map((item, i) => (
-              <div key={i} data-sub-section style={listItem}>&#x25CB; {item}</div>
-            ))}
-          </div>
-        )}
-
-        {/* 導入セリフ例 */}
-        {pi.sampleOpening && (
-          <div data-section="opening" style={{ padding: "8mm 20mm" }}>
-            <div style={labelStyle}>導入セリフ例</div>
-            <div
-              style={{
-                padding: "10px 14px",
-                background: "#f9fafb",
-                borderLeft: `3px solid ${ACCENT}`,
-                borderRadius: "0 6px 6px 0",
-                fontSize: "12px",
-                fontStyle: "italic",
-                color: "#374151",
-              }}
-            >
-              &ldquo;{pi.sampleOpening}&rdquo;
-            </div>
-          </div>
-        )}
-
-        {/* キーメッセージ + トーン&マナー */}
-        <div data-section="messages" style={{ padding: "8mm 20mm" }}>
-          <h2 style={sectionTitle}>キーメッセージ & トーン</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-            <div>
-              <div style={labelStyle}>伝えてほしいポイント</div>
-              {pi.keyMessages.map((msg, i) => (
-                <div key={i} data-sub-section style={listItem}>&#x2022; {msg}</div>
-              ))}
-            </div>
-            {pi.toneAndManner && (
-              <div>
-                <div style={labelStyle}>トーン & マナー</div>
-                <div style={valueStyle}>{pi.toneAndManner}</div>
-              </div>
-            )}
-          </div>
+        {/* 企画について */}
+        <div data-section="ideas-note" style={{ padding: "8mm 20mm" }}>
+          <h2 style={sectionTitle}>企画について</h2>
+          <p style={valueStyle}>
+            企画の方向性は {channelName} 様にお任せいたします。
+            上記の施策概要・投稿指示書を踏まえたうえで、
+            {channelName} 様ならではの視点と世界観を活かしたコンテンツをご制作ください。
+          </p>
+          <p style={{ ...valueStyle, fontStyle: "italic", color: "#6b7280" }}>
+            ※参考企画案を別紙にてご用意しております。ご希望の場合はお声がけください。
+          </p>
         </div>
-
-        {/* 概要欄テンプレート */}
-        {pi.descriptionBoxSuggestion && (
-          <div data-section="description" style={{ padding: "8mm 20mm" }}>
-            <h2 style={sectionTitle}>概要欄テンプレート</h2>
-            <pre
-              style={{
-                whiteSpace: "pre-wrap",
-                fontFamily: "'Courier New', monospace",
-                fontSize: "10px",
-                lineHeight: 1.6,
-                padding: "12px",
-                background: "#f9fafb",
-                border: "1px solid #e5e7eb",
-                borderRadius: "6px",
-              }}
-            >
-              {pi.descriptionBoxSuggestion}
-            </pre>
-          </div>
-        )}
 
         {/* フッター */}
         <div style={{ padding: "8mm 20mm", borderTop: "1px solid #e5e7eb", marginTop: "4mm" }}>
