@@ -48,7 +48,11 @@ function getCampaignTypeStyle(type: string) {
 
 function hasPostingInstruction(idea: CollabIdea): boolean {
   const p = idea.postingInstruction;
-  return !!(p && (p.contentDirection || p.descriptionBoxSuggestion || p.keyMessages.length > 0 || p.toneAndManner || p.brandMustDo?.length > 0 || p.creatorContext));
+  return !!(p && (
+    p.contentDirection || p.descriptionBoxSuggestion || p.keyMessages.length > 0 || p.toneAndManner ||
+    p.brandMustDo?.length > 0 || p.brandMustNot?.length > 0 || p.creatorFreedom?.length > 0 ||
+    p.creatorContext || p.sampleOpening
+  ));
 }
 
 function hasDistributionStrategy(idea: CollabIdea): boolean {
