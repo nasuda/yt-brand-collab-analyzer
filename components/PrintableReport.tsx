@@ -7,6 +7,7 @@ export interface ReportSettings {
   authorName: string;
   sections: Record<string, boolean>;
   collabIdeasCount: "top3" | "all";
+  showDistributionStrategy?: boolean;
 }
 
 interface PrintableReportProps {
@@ -503,15 +504,17 @@ export const PrintableReport = forwardRef<HTMLDivElement, PrintableReportProps>(
                 </div>
 
                 {/* 配信戦略 */}
-                <div style={{ marginTop: "8px", padding: "10px", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "6px" }}>
-                  <div style={{ fontSize: "10px", fontWeight: 600, marginBottom: "6px", color: "#1e40af" }}>配信戦略</div>
-                  <p style={{ fontSize: "10px" }}><strong>広告:</strong> {idea.distributionStrategy.adProduct}</p>
-                  {idea.distributionStrategy.mixStrategy && (
-                    <p style={{ fontSize: "10px" }}><strong>ミックス方針:</strong> {idea.distributionStrategy.mixStrategy}</p>
-                  )}
-                  <p style={{ fontSize: "10px" }}><strong>ターゲティング:</strong> {idea.distributionStrategy.audienceTargeting}</p>
-                  <p style={{ fontSize: "10px" }}><strong>予算配分:</strong> {idea.distributionStrategy.budgetAllocation}</p>
-                </div>
+                {settings.showDistributionStrategy !== false && (
+                  <div style={{ marginTop: "8px", padding: "10px", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "6px" }}>
+                    <div style={{ fontSize: "10px", fontWeight: 600, marginBottom: "6px", color: "#1e40af" }}>配信戦略</div>
+                    <p style={{ fontSize: "10px" }}><strong>広告:</strong> {idea.distributionStrategy.adProduct}</p>
+                    {idea.distributionStrategy.mixStrategy && (
+                      <p style={{ fontSize: "10px" }}><strong>ミックス方針:</strong> {idea.distributionStrategy.mixStrategy}</p>
+                    )}
+                    <p style={{ fontSize: "10px" }}><strong>ターゲティング:</strong> {idea.distributionStrategy.audienceTargeting}</p>
+                    <p style={{ fontSize: "10px" }}><strong>予算配分:</strong> {idea.distributionStrategy.budgetAllocation}</p>
+                  </div>
+                )}
               </div>
             ))}
           </div>
