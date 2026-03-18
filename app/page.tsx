@@ -10,15 +10,17 @@ import { ReportSettingsModal } from "@/components/ReportSettingsModal";
 import { PrintableReport } from "@/components/PrintableReport";
 import type { ReportSettings } from "@/components/PrintableReport";
 import { CreatorBriefReport } from "@/components/CreatorBriefReport";
+import { IdeaSheetReport } from "@/components/IdeaSheetReport";
 import { CollabIdea } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { RotateCcw, FileText } from "lucide-react";
+import { RotateCcw, FileText, FileDown } from "lucide-react";
 
 export default function Home() {
   const { status, result, comparisonResult, error, loadingStep, mode, analyze, compare, reset } =
     useAnalysis();
   const { exportReport, exporting } = useExportPDF();
   const [showReportModal, setShowReportModal] = useState(false);
+  const [exportingBrief, setExportingBrief] = useState(false);
   const [exportingBriefIndex, setExportingBriefIndex] = useState<number | null>(null);
   const reportContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -33,7 +35,6 @@ export default function Home() {
       try {
         root.render(<PrintableReport result={result} settings={settings} />);
 
-        // 描画完了を待つ: requestAnimationFrame 2回でブラウザの描画サイクルを確実に通す
         await new Promise<void>((resolve) => {
           requestAnimationFrame(() => {
             requestAnimationFrame(() => resolve());
@@ -44,11 +45,9 @@ export default function Home() {
         const brand = result.brandName || "brand";
         await exportReport(container, `${channelName}_x_${brand}_レポート`);
 
-        // 成功時のみモーダルを閉じる
         root.unmount();
         setShowReportModal(false);
       } catch (err) {
-        // 失敗時はモーダルを開いたままにしてエラー表示を子に任せる
         root.unmount();
         throw err;
       }
@@ -56,7 +55,46 @@ export default function Home() {
     [result, exportReport]
   );
 
-  const handleExportBrief = useCallback(
+  // メインブリーフ出力（施策概要 + 投稿指示書、企画案なし）
+  const handleExportMainBrief = useCallback(
+    async () => {
+      if (!result) return;
+      setExportingBrief(true);
+
+      const container = document.createElement("div");
+      const root = createRoot(container);
+      try {
+        root.render(
+          <CreatorBriefReport
+            brandName={result.brandName}
+            channelName={result.channel.title}
+            campaignOverview={result.analysis.campaignOverview}
+            campaignRules={result.analysis.campaignRules}
+            brandAlignmentReasoning={result.analysis.brandAlignmentReasoning}
+          />
+        );
+
+        await new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve());
+          });
+        });
+
+        const channelName = result.channel.title || "creator";
+        await exportReport(container, `${channelName}_x_${result.brandName}_ブリーフ`);
+        root.unmount();
+      } catch (err) {
+        root.unmount();
+        console.error("Brief export failed:", err);
+      } finally {
+        setExportingBrief(false);
+      }
+    },
+    [result, exportReport]
+  );
+
+  // 企画シート出力（個別の企画案、別紙）
+  const handleExportIdeaSheet = useCallback(
     async (idea: CollabIdea) => {
       if (!result) return;
 
@@ -67,11 +105,10 @@ export default function Home() {
       const root = createRoot(container);
       try {
         root.render(
-          <CreatorBriefReport
+          <IdeaSheetReport
             brandName={result.brandName}
             channelName={result.channel.title}
             idea={idea}
-            campaignOverview={result.analysis.campaignOverview}
           />
         );
 
@@ -83,11 +120,11 @@ export default function Home() {
 
         const channelName = result.channel.title || "creator";
         const safeTitle = idea.title.replace(/[/\\?%*:|"<>]/g, "_").slice(0, 30);
-        await exportReport(container, `${channelName}_ブリーフ_${safeTitle}`);
+        await exportReport(container, `${channelName}_企画シート_${safeTitle}`);
         root.unmount();
       } catch (err) {
         root.unmount();
-        console.error("Brief export failed:", err);
+        console.error("Idea sheet export failed:", err);
       } finally {
         setExportingBriefIndex(null);
       }
@@ -121,14 +158,24 @@ export default function Home() {
           {status === "success" && (
             <div className="flex justify-end gap-2">
               {canExportReport && (
-                <Button
-                  variant="outline"
-                  onClick={() => setShowReportModal(true)}
-                  disabled={exporting}
-                >
-                  <FileText className="h-4 w-4" />
-                  {exporting ? "レポート生成中..." : "レポート出力"}
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={handleExportMainBrief}
+                    disabled={exporting || exportingBrief}
+                  >
+                    <FileDown className="h-4 w-4" />
+                    {exportingBrief ? "ブリーフ生成中..." : "クリエイターブリーフ"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowReportModal(true)}
+                    disabled={exporting}
+                  >
+                    <FileText className="h-4 w-4" />
+                    {exporting ? "レポート生成中..." : "レポート出力"}
+                  </Button>
+                </>
               )}
               <Button variant="outline" onClick={reset}>
                 <RotateCcw className="h-4 w-4" />
@@ -139,7 +186,7 @@ export default function Home() {
 
           <AnalysisResults
             state={{ status, result, comparisonResult, error, loadingStep, mode }}
-            onExportBrief={handleExportBrief}
+            onExportIdeaSheet={handleExportIdeaSheet}
             exportingBriefIndex={exportingBriefIndex}
           />
         </div>

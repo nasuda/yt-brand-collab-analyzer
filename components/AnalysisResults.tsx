@@ -15,11 +15,11 @@ import { AlertTriangle } from "lucide-react";
 
 interface AnalysisResultsProps {
   state: AnalysisState;
-  onExportBrief?: (idea: CollabIdea) => void;
+  onExportIdeaSheet?: (idea: CollabIdea) => void;
   exportingBriefIndex?: number | null;
 }
 
-export function AnalysisResults({ state, onExportBrief, exportingBriefIndex }: AnalysisResultsProps) {
+export function AnalysisResults({ state, onExportIdeaSheet, exportingBriefIndex }: AnalysisResultsProps) {
   if (state.status === "idle") return null;
 
   if (state.status === "loading") {
@@ -71,10 +71,7 @@ export function AnalysisResults({ state, onExportBrief, exportingBriefIndex }: A
       <BrandFitScore analysis={analysis} brandName={brandName} />
       <CollabIdeas
         ideas={analysis.collabIdeas}
-        brandName={brandName}
-        channel={channel}
-        campaignOverview={analysis.campaignOverview}
-        onExportBrief={onExportBrief}
+        onExportIdeaSheet={onExportIdeaSheet}
         exportingBriefIndex={exportingBriefIndex}
       />
       <VideoList videos={videos} />
