@@ -219,6 +219,17 @@ const responseSchema = {
       },
       description: "類似クリエイター（3-5名。同カテゴリ・同規模・同ターゲット層で選定）",
     },
+    campaignOverview: {
+      type: Type.OBJECT,
+      properties: {
+        objective: { type: Type.STRING, description: "施策の目的（ブランドが何を達成したいか。brandDescriptionから抽出。1-2文）" },
+        challenge: { type: Type.STRING, description: "課題感・背景（なぜこの施策が必要か。ブランドや市場の課題。1-2文）" },
+        insight: { type: Type.STRING, description: "ターゲットインサイト（ターゲットの心理・行動の核心。共感を呼ぶ表現で。1-2文）" },
+        targetAudience: { type: Type.STRING, description: "ターゲット像（年齢層、属性、ライフスタイル等。1文）" },
+      },
+      required: ["objective", "challenge", "insight", "targetAudience"],
+      description: "施策概要（brandDescriptionから抽出。クリエイターブリーフの冒頭に表示される）",
+    },
   },
   required: [
     "overallScore",
@@ -233,6 +244,7 @@ const responseSchema = {
     "categoryBenchmark",
     "audiencePersona",
     "similarCreators",
+    "campaignOverview",
   ],
 };
 
@@ -428,6 +440,15 @@ PR表記の位置、ブランドリンク、ハッシュタグ、クーポンコ
 - 同カテゴリ・同規模・同ターゲット層の日本のYouTubeクリエイターを3-5名選定。
 - ブランドが比較検討する際に有用な情報として、各クリエイターとの共通点・差異点を reason に記載。
 - 実在するクリエイターのみを挙げること。不明な場合は少数でもよい。
+
+### 施策概要（campaignOverview）
+brandDescription から施策の核となる情報を抽出し、クリエイターブリーフの冒頭に表示する形式で構造化する。
+クリエイターが「この施策で何が求められているか」を一読で理解できる内容にすること。
+- objective: ブランドが達成したいゴール。「〇〇を通じて△△を実現する」のように簡潔に。
+- challenge: この施策が必要な理由・背景。市場環境やブランドの課題を端的に。
+- insight: ターゲットの心理・行動の核心。クリエイターが共感し、コンテンツの切り口に活かせる表現で。
+- targetAudience: 届けたい人物像。年齢層・属性・ライフスタイルを具体的に。
+brandDescription がない場合は、ブランド名と分析データから推測し、「推定」であることを明記する。
 
 全ての回答は日本語で返してください。`;
 
@@ -1190,6 +1211,17 @@ export async function analyzeBrandFit(
     });
   }
 
+  // campaignOverview — スキーマの required 全フィールドを検証
+  if (!raw.campaignOverview || typeof raw.campaignOverview !== "object") {
+    errors.push("campaignOverview");
+  } else {
+    const co = raw.campaignOverview as Record<string, unknown>;
+    const coRequired = ["objective", "challenge", "insight", "targetAudience"] as const;
+    for (const field of coRequired) {
+      if (typeof co[field] !== "string") { errors.push(`campaignOverview.${field}`); break; }
+    }
+  }
+
   if (errors.length > 0) {
     throw new Error(`Geminiの応答が不完全です（欠落フィールド: ${errors.join(", ")}）`);
   }
@@ -1332,6 +1364,12 @@ export async function analyzeBrandFit(
     categoryBenchmark,
     audiencePersona,
     similarCreators,
+    campaignOverview: {
+      objective: (raw.campaignOverview as Record<string, unknown>).objective as string,
+      challenge: (raw.campaignOverview as Record<string, unknown>).challenge as string,
+      insight: (raw.campaignOverview as Record<string, unknown>).insight as string,
+      targetAudience: (raw.campaignOverview as Record<string, unknown>).targetAudience as string,
+    },
   };
 
   return result;
