@@ -4,7 +4,7 @@ import { useState } from "react";
 import { CollabIdea } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Lightbulb, Sparkles, Target, Shield, Zap, FileEdit, Megaphone, ChevronDown, ChevronRight, Users, Eye } from "lucide-react";
+import { Lightbulb, Sparkles, Target, Shield, Zap, FileEdit, Megaphone, ChevronDown, ChevronRight, Users, Eye, CheckCircle2, XCircle, Palette, MessageSquare } from "lucide-react";
 
 interface CollabIdeasProps {
   ideas: CollabIdea[];
@@ -48,7 +48,11 @@ function getCampaignTypeStyle(type: string) {
 
 function hasPostingInstruction(idea: CollabIdea): boolean {
   const p = idea.postingInstruction;
-  return !!(p && (p.contentDirection || p.descriptionBoxSuggestion || p.keyMessages.length > 0 || p.toneAndManner));
+  return !!(p && (
+    p.contentDirection || p.descriptionBoxSuggestion || p.keyMessages.length > 0 || p.toneAndManner ||
+    p.brandMustDo?.length > 0 || p.brandMustNot?.length > 0 || p.creatorFreedom?.length > 0 ||
+    p.creatorContext || p.sampleOpening
+  ));
 }
 
 function hasDistributionStrategy(idea: CollabIdea): boolean {
@@ -174,12 +178,90 @@ export function CollabIdeas({ ideas }: CollabIdeasProps) {
                   </button>
                   {openPostingIds.has(i) && (
                     <div className="px-3 py-3 space-y-3 text-sm border-t">
+                      {/* クリエイターコンテキスト */}
+                      {idea.postingInstruction.creatorContext && (
+                        <div className="bg-amber-50 dark:bg-amber-950/30 rounded-md p-3">
+                          <p className="font-medium text-amber-700 dark:text-amber-400 mb-1 flex items-center gap-1.5">
+                            <MessageSquare className="h-3.5 w-3.5" />
+                            クリエイターコンテキスト
+                          </p>
+                          <p className="text-muted-foreground">{idea.postingInstruction.creatorContext}</p>
+                        </div>
+                      )}
+
+                      {/* 構成ガイド */}
                       {idea.postingInstruction.contentDirection && (
                         <div>
-                          <p className="font-medium text-emerald-700 dark:text-emerald-400 mb-1">コンテンツの方向性</p>
+                          <p className="font-medium text-emerald-700 dark:text-emerald-400 mb-1">構成ガイド</p>
                           <p className="text-muted-foreground">{idea.postingInstruction.contentDirection}</p>
                         </div>
                       )}
+
+                      {/* ブランド必須 / NG の2カラム */}
+                      {(idea.postingInstruction.brandMustDo?.length > 0 || idea.postingInstruction.brandMustNot?.length > 0) && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {idea.postingInstruction.brandMustDo?.length > 0 && (
+                            <div className="bg-green-50 dark:bg-green-950/30 rounded-md p-3">
+                              <p className="font-medium text-green-700 dark:text-green-400 mb-1.5 flex items-center gap-1.5">
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                ブランド必須要件
+                              </p>
+                              <ul className="space-y-1">
+                                {idea.postingInstruction.brandMustDo.map((item, j) => (
+                                  <li key={j} className="text-muted-foreground flex items-start gap-1.5">
+                                    <span className="text-green-500 mt-0.5 shrink-0">&#x2022;</span>
+                                    {item}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {idea.postingInstruction.brandMustNot?.length > 0 && (
+                            <div className="bg-red-50 dark:bg-red-950/30 rounded-md p-3">
+                              <p className="font-medium text-red-700 dark:text-red-400 mb-1.5 flex items-center gap-1.5">
+                                <XCircle className="h-3.5 w-3.5" />
+                                NG行為・表現
+                              </p>
+                              <ul className="space-y-1">
+                                {idea.postingInstruction.brandMustNot.map((item, j) => (
+                                  <li key={j} className="text-muted-foreground flex items-start gap-1.5">
+                                    <span className="text-red-500 mt-0.5 shrink-0">&#x2022;</span>
+                                    {item}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* クリエイターの自由裁量 */}
+                      {idea.postingInstruction.creatorFreedom?.length > 0 && (
+                        <div className="bg-violet-50 dark:bg-violet-950/30 rounded-md p-3">
+                          <p className="font-medium text-violet-700 dark:text-violet-400 mb-1.5 flex items-center gap-1.5">
+                            <Palette className="h-3.5 w-3.5" />
+                            クリエイターの自由裁量
+                          </p>
+                          <ul className="space-y-1">
+                            {idea.postingInstruction.creatorFreedom.map((item, j) => (
+                              <li key={j} className="text-muted-foreground flex items-start gap-1.5">
+                                <span className="text-violet-500 mt-0.5 shrink-0">&#x2022;</span>
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* 導入セリフ例 */}
+                      {idea.postingInstruction.sampleOpening && (
+                        <div className="border-l-3 border-emerald-400 pl-3">
+                          <p className="font-medium text-emerald-700 dark:text-emerald-400 mb-1">導入セリフ例</p>
+                          <p className="text-muted-foreground italic">&ldquo;{idea.postingInstruction.sampleOpening}&rdquo;</p>
+                        </div>
+                      )}
+
+                      {/* キーメッセージ */}
                       {idea.postingInstruction.keyMessages.length > 0 && (
                         <div>
                           <p className="font-medium text-emerald-700 dark:text-emerald-400 mb-1">キーメッセージ</p>
@@ -190,12 +272,16 @@ export function CollabIdeas({ ideas }: CollabIdeasProps) {
                           </ul>
                         </div>
                       )}
+
+                      {/* トーン&マナー */}
                       {idea.postingInstruction.toneAndManner && (
                         <div>
                           <p className="font-medium text-emerald-700 dark:text-emerald-400 mb-1">トーン&マナー</p>
                           <p className="text-muted-foreground">{idea.postingInstruction.toneAndManner}</p>
                         </div>
                       )}
+
+                      {/* 概要欄テンプレート */}
                       {idea.postingInstruction.descriptionBoxSuggestion && (
                         <div>
                           <p className="font-medium text-emerald-700 dark:text-emerald-400 mb-1">概要欄テンプレート</p>

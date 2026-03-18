@@ -36,6 +36,7 @@ export function ReportSettingsModal({
     Object.fromEntries(SECTION_OPTIONS.map((s) => [s.key, true]))
   );
   const [collabIdeasCount, setCollabIdeasCount] = useState<"top3" | "all">("top3");
+  const [showDistributionStrategy, setShowDistributionStrategy] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   if (!open) return null;
@@ -49,7 +50,7 @@ export function ReportSettingsModal({
   const handleGenerate = async () => {
     setError(null);
     try {
-      await onGenerate({ authorName, sections, collabIdeasCount });
+      await onGenerate({ authorName, sections, collabIdeasCount, showDistributionStrategy });
     } catch (err) {
       setError(err instanceof Error ? err.message : "レポート生成に失敗しました");
     }
@@ -122,6 +123,19 @@ export function ReportSettingsModal({
                 <span className="text-sm">全件</span>
               </label>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>企画案の詳細</Label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showDistributionStrategy}
+                onChange={() => setShowDistributionStrategy((prev) => !prev)}
+                className="rounded"
+              />
+              <span className="text-sm">配信戦略（メディア戦略）を含める</span>
+            </label>
           </div>
         </div>
 

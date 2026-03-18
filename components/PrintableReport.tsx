@@ -7,6 +7,7 @@ export interface ReportSettings {
   authorName: string;
   sections: Record<string, boolean>;
   collabIdeasCount: "top3" | "all";
+  showDistributionStrategy?: boolean;
 }
 
 interface PrintableReportProps {
@@ -455,24 +456,68 @@ export const PrintableReport = forwardRef<HTMLDivElement, PrintableReportProps>(
                 {/* 投稿指示書 */}
                 <div style={{ marginTop: "12px", padding: "10px", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "6px" }}>
                   <div style={{ fontSize: "10px", fontWeight: 600, marginBottom: "6px", color: "#065f46" }}>投稿指示書</div>
-                  <p style={{ fontSize: "10px" }}><strong>方向性:</strong> {idea.postingInstruction.contentDirection}</p>
-                  <p style={{ fontSize: "10px" }}><strong>キーメッセージ:</strong> {idea.postingInstruction.keyMessages.join(" / ")}</p>
+
+                  {idea.postingInstruction.creatorContext && (
+                    <div style={{ padding: "6px 8px", background: "#fffbeb", borderRadius: "4px", marginBottom: "6px" }}>
+                      <p style={{ fontSize: "10px" }}><strong>クリエイターコンテキスト:</strong> {idea.postingInstruction.creatorContext}</p>
+                    </div>
+                  )}
+
+                  <p style={{ fontSize: "10px" }}><strong>構成ガイド:</strong> {idea.postingInstruction.contentDirection}</p>
+
+                  {idea.postingInstruction.brandMustDo?.length > 0 && (
+                    <div style={{ marginTop: "4px" }}>
+                      <p style={{ fontSize: "10px", fontWeight: 600, color: "#166534" }}>必須要件:</p>
+                      {idea.postingInstruction.brandMustDo.map((item, j) => (
+                        <p key={j} style={{ fontSize: "10px", paddingLeft: "8px" }}>&#x2713; {item}</p>
+                      ))}
+                    </div>
+                  )}
+
+                  {idea.postingInstruction.brandMustNot?.length > 0 && (
+                    <div style={{ marginTop: "4px" }}>
+                      <p style={{ fontSize: "10px", fontWeight: 600, color: "#991b1b" }}>NG:</p>
+                      {idea.postingInstruction.brandMustNot.map((item, j) => (
+                        <p key={j} style={{ fontSize: "10px", paddingLeft: "8px" }}>&#x2717; {item}</p>
+                      ))}
+                    </div>
+                  )}
+
+                  {idea.postingInstruction.creatorFreedom?.length > 0 && (
+                    <div style={{ marginTop: "4px" }}>
+                      <p style={{ fontSize: "10px", fontWeight: 600, color: "#5b21b6" }}>クリエイター自由裁量:</p>
+                      {idea.postingInstruction.creatorFreedom.map((item, j) => (
+                        <p key={j} style={{ fontSize: "10px", paddingLeft: "8px" }}>&#x25CB; {item}</p>
+                      ))}
+                    </div>
+                  )}
+
+                  {idea.postingInstruction.sampleOpening && (
+                    <p style={{ fontSize: "10px", marginTop: "4px" }}><strong>導入例:</strong> &ldquo;{idea.postingInstruction.sampleOpening}&rdquo;</p>
+                  )}
+
+                  <p style={{ fontSize: "10px", marginTop: "4px" }}><strong>キーメッセージ:</strong> {idea.postingInstruction.keyMessages.join(" / ")}</p>
                   <p style={{ fontSize: "10px" }}><strong>トーン&マナー:</strong> {idea.postingInstruction.toneAndManner}</p>
                   {idea.postingInstruction.descriptionBoxSuggestion && (
-                    <p style={{ fontSize: "10px" }}><strong>概要欄:</strong> {idea.postingInstruction.descriptionBoxSuggestion}</p>
+                    <div style={{ fontSize: "10px" }}>
+                      <strong>概要欄:</strong>
+                      <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", margin: "4px 0 0", fontSize: "10px" }}>{idea.postingInstruction.descriptionBoxSuggestion}</pre>
+                    </div>
                   )}
                 </div>
 
                 {/* 配信戦略 */}
-                <div style={{ marginTop: "8px", padding: "10px", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "6px" }}>
-                  <div style={{ fontSize: "10px", fontWeight: 600, marginBottom: "6px", color: "#1e40af" }}>配信戦略</div>
-                  <p style={{ fontSize: "10px" }}><strong>広告:</strong> {idea.distributionStrategy.adProduct}</p>
-                  {idea.distributionStrategy.mixStrategy && (
-                    <p style={{ fontSize: "10px" }}><strong>ミックス方針:</strong> {idea.distributionStrategy.mixStrategy}</p>
-                  )}
-                  <p style={{ fontSize: "10px" }}><strong>ターゲティング:</strong> {idea.distributionStrategy.audienceTargeting}</p>
-                  <p style={{ fontSize: "10px" }}><strong>予算配分:</strong> {idea.distributionStrategy.budgetAllocation}</p>
-                </div>
+                {settings.showDistributionStrategy !== false && (
+                  <div style={{ marginTop: "8px", padding: "10px", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "6px" }}>
+                    <div style={{ fontSize: "10px", fontWeight: 600, marginBottom: "6px", color: "#1e40af" }}>配信戦略</div>
+                    <p style={{ fontSize: "10px" }}><strong>広告:</strong> {idea.distributionStrategy.adProduct}</p>
+                    {idea.distributionStrategy.mixStrategy && (
+                      <p style={{ fontSize: "10px" }}><strong>ミックス方針:</strong> {idea.distributionStrategy.mixStrategy}</p>
+                    )}
+                    <p style={{ fontSize: "10px" }}><strong>ターゲティング:</strong> {idea.distributionStrategy.audienceTargeting}</p>
+                    <p style={{ fontSize: "10px" }}><strong>予算配分:</strong> {idea.distributionStrategy.budgetAllocation}</p>
+                  </div>
+                )}
               </div>
             ))}
           </div>

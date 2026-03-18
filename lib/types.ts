@@ -104,10 +104,15 @@ export interface BrandSafety {
 }
 
 export interface PostingInstruction {
-  contentDirection: string;        // コンテンツの方向性・トーン・スタイル指示
-  descriptionBoxSuggestion: string; // 概要欄の推奨内容
-  keyMessages: string[];           // 伝えるべきキーメッセージ（3〜5個）
-  toneAndManner: string;           // トーン&マナー・NG表現等
+  contentDirection: string;         // 構成フレームワーク（固定/自由ゾーンを明示した構成ガイド）
+  descriptionBoxSuggestion: string; // 概要欄テンプレート
+  keyMessages: string[];            // キーメッセージ（3〜5個）
+  toneAndManner: string;            // トーン&マナー
+  brandMustDo: string[];            // ブランド必須要件（法的義務・訴求必須ポイント、3-5個）
+  brandMustNot: string[];           // NG行為・表現（絶対やってはいけないこと、2-4個）
+  creatorFreedom: string[];         // クリエイターの自由裁量領域（3-5個）
+  creatorContext: string;           // この企画がこのクリエイターに合う理由（動画・コメント分析に基づく根拠）
+  sampleOpening: string;            // クリエイターの話し方で書いた導入例（30-50字）
 }
 
 export interface DistributionStrategy {
