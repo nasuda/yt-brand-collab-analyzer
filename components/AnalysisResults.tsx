@@ -1,6 +1,6 @@
 "use client";
 
-import { AnalysisState } from "@/lib/types";
+import { AnalysisState, CollabIdea } from "@/lib/types";
 import { LoadingState } from "./LoadingState";
 import { ChannelOverview } from "./ChannelOverview";
 import { EngagementMetrics } from "./EngagementMetrics";
@@ -15,9 +15,11 @@ import { AlertTriangle } from "lucide-react";
 
 interface AnalysisResultsProps {
   state: AnalysisState;
+  onExportBrief?: (idea: CollabIdea) => void;
+  exportingBriefIndex?: number | null;
 }
 
-export function AnalysisResults({ state }: AnalysisResultsProps) {
+export function AnalysisResults({ state, onExportBrief, exportingBriefIndex }: AnalysisResultsProps) {
   if (state.status === "idle") return null;
 
   if (state.status === "loading") {
@@ -67,7 +69,14 @@ export function AnalysisResults({ state }: AnalysisResultsProps) {
         <ResearchSummary creatorResearch={creatorResearch} researchMode={researchMode} />
       )}
       <BrandFitScore analysis={analysis} brandName={brandName} />
-      <CollabIdeas ideas={analysis.collabIdeas} />
+      <CollabIdeas
+        ideas={analysis.collabIdeas}
+        brandName={brandName}
+        channel={channel}
+        campaignOverview={analysis.campaignOverview}
+        onExportBrief={onExportBrief}
+        exportingBriefIndex={exportingBriefIndex}
+      />
       <VideoList videos={videos} />
     </div>
   );

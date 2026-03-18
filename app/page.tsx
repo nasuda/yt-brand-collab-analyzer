@@ -9,6 +9,8 @@ import { AnalysisResults } from "@/components/AnalysisResults";
 import { ReportSettingsModal } from "@/components/ReportSettingsModal";
 import { PrintableReport } from "@/components/PrintableReport";
 import type { ReportSettings } from "@/components/PrintableReport";
+import { CreatorBriefReport } from "@/components/CreatorBriefReport";
+import { CollabIdea } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, FileText } from "lucide-react";
 
@@ -17,6 +19,7 @@ export default function Home() {
     useAnalysis();
   const { exportReport, exporting } = useExportPDF();
   const [showReportModal, setShowReportModal] = useState(false);
+  const [exportingBriefIndex, setExportingBriefIndex] = useState<number | null>(null);
   const reportContainerRef = useRef<HTMLDivElement | null>(null);
 
   const handleGenerateReport = useCallback(
@@ -48,6 +51,45 @@ export default function Home() {
         // 失敗時はモーダルを開いたままにしてエラー表示を子に任せる
         root.unmount();
         throw err;
+      }
+    },
+    [result, exportReport]
+  );
+
+  const handleExportBrief = useCallback(
+    async (idea: CollabIdea) => {
+      if (!result) return;
+
+      const ideaIndex = result.analysis.collabIdeas.indexOf(idea);
+      setExportingBriefIndex(ideaIndex >= 0 ? ideaIndex : 0);
+
+      const container = document.createElement("div");
+      const root = createRoot(container);
+      try {
+        root.render(
+          <CreatorBriefReport
+            brandName={result.brandName}
+            channelName={result.channel.title}
+            idea={idea}
+            campaignOverview={result.analysis.campaignOverview}
+          />
+        );
+
+        await new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve());
+          });
+        });
+
+        const channelName = result.channel.title || "creator";
+        const safeTitle = idea.title.replace(/[/\\?%*:|"<>]/g, "_").slice(0, 30);
+        await exportReport(container, `${channelName}_ブリーフ_${safeTitle}`);
+        root.unmount();
+      } catch (err) {
+        root.unmount();
+        console.error("Brief export failed:", err);
+      } finally {
+        setExportingBriefIndex(null);
       }
     },
     [result, exportReport]
@@ -97,6 +139,8 @@ export default function Home() {
 
           <AnalysisResults
             state={{ status, result, comparisonResult, error, loadingStep, mode }}
+            onExportBrief={handleExportBrief}
+            exportingBriefIndex={exportingBriefIndex}
           />
         </div>
       </div>
