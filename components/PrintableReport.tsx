@@ -499,7 +499,10 @@ export const PrintableReport = forwardRef<HTMLDivElement, PrintableReportProps>(
                   <p style={{ fontSize: "10px", marginTop: "4px" }}><strong>キーメッセージ:</strong> {idea.postingInstruction.keyMessages.join(" / ")}</p>
                   <p style={{ fontSize: "10px" }}><strong>トーン&マナー:</strong> {idea.postingInstruction.toneAndManner}</p>
                   {idea.postingInstruction.descriptionBoxSuggestion && (
-                    <p style={{ fontSize: "10px" }}><strong>概要欄:</strong> {idea.postingInstruction.descriptionBoxSuggestion}</p>
+                    <div style={{ fontSize: "10px" }}>
+                      <strong>概要欄:</strong>
+                      <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", margin: "4px 0 0", fontSize: "10px" }}>{idea.postingInstruction.descriptionBoxSuggestion}</pre>
+                    </div>
                   )}
                 </div>
 
