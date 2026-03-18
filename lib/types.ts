@@ -165,6 +165,13 @@ export interface SimilarCreator {
   reason: string;
 }
 
+export interface CampaignOverview {
+  objective: string;       // 施策の目的（何を達成したいか）
+  challenge: string;       // 課題感・背景（なぜこの施策が必要か）
+  insight: string;         // ターゲットインサイト（ターゲットの心理・行動の核心）
+  targetAudience: string;  // ターゲット像（誰に届けたいか）
+}
+
 export interface BrandFitAnalysis {
   overallScore: number;
   scoreBreakdown: ScoreBreakdown;
@@ -178,6 +185,7 @@ export interface BrandFitAnalysis {
   categoryBenchmark: CategoryBenchmark;
   audiencePersona: AudiencePersona;
   similarCreators: SimilarCreator[];
+  campaignOverview?: CampaignOverview;
 }
 
 export interface ChannelMetrics {
