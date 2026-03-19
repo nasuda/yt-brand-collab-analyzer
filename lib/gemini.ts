@@ -243,9 +243,21 @@ const responseSchema = {
           items: { type: Type.STRING },
           description: "全企画に共通して適用されるNG事項（競合言及禁止、特定表現の禁止、ブランドイメージを損なう表現等）。2-4個",
         },
+        creativeDirection: {
+          type: Type.OBJECT,
+          properties: {
+            strategicNarrative: { type: Type.STRING, description: "クリエイターの世界観×ブランド課題の戦略的方向性。このクリエイターだからこそ成立する企画の方向性を2-3文で。具体的な企画案ではなく戦略レベルの指針" },
+            creatorWorldview: { type: Type.STRING, description: "このクリエイターの世界観を一言で要約（動画テーマ・トーン・signatureElements・bestPerformingTypeから抽出）" },
+            connectionPoint: { type: Type.STRING, description: "クリエイターの世界観とブランド課題が交差する具体的なポイント" },
+            suggestedAngle: { type: Type.STRING, description: "推奨する戦略的アングル。企画案ではなく「こういう角度で企画を考えると良い」という方向性指針" },
+            avoidanceNote: { type: Type.STRING, description: "この組み合わせで避けるべきアプローチ（クリエイティブ上の理由。universalMustNotの法的NGとは別次元の戦略的警告）" },
+          },
+          required: ["strategicNarrative", "creatorWorldview", "connectionPoint", "suggestedAngle", "avoidanceNote"],
+          description: "クリエイター別クリエイティブ方向性。同じブランドでもクリエイターが違えば全く異なる方向性になること",
+        },
       },
-      required: ["universalMustDo", "universalMustNot"],
-      description: "キャンペーン全体に共通するルール（個別企画のbrandMustDo/brandMustNotとは別。重複禁止）",
+      required: ["universalMustDo", "universalMustNot", "creativeDirection"],
+      description: "キャンペーン全体に共通するルール（個別企画のbrandMustDo/brandMustNotとは別。重複禁止）+ クリエイター別方向性",
     },
   },
   required: [
@@ -543,6 +555,23 @@ brandDescription から施策の核となる情報を抽出し、クリエイタ
 - targetAudience: 届けたい人物像。属性データだけでなく、ライフスタイルや心理状態も含めて描写する。
   NG: 「25-34歳の都市部在住の男女」
   OK: 「毎日を忙しく過ごしながらも、"本当にこれでいいのかな"とふと立ち止まる20-30代」
+
+### クリエイティブ方向性（creativeDirection）
+campaignRules 内にクリエイター別のクリエイティブ方向性を生成する。
+**最重要原則: 同じブランドでもクリエイターが違えば全く異なる方向性になること。**
+
+生成プロセス:
+1. クリエイターの世界観を抽出（動画テーマ・トーン・signatureElements・bestPerformingType）
+2. ブランドの課題感・インサイトを確認（brandDescriptionから）
+3. 両者の交差点を特定
+4. 戦略的アングルを導出
+5. 避けるべきアプローチを明示
+
+- strategicNarrative: メインの出力。「あなたの"○○"を切り口にしたコンテンツが視聴者の共感を得やすい。ブランドの課題は"△△"なので…」のような2-3文。クリエイターの動画データ・コメント傾向に基づく具体的な根拠を含めること。
+- creatorWorldview: クリエイターのコンテンツアイデンティティの要約。動画のテーマ傾向・トーン・視聴者との関係性から一言で。
+- connectionPoint: 世界観とブランド課題の具体的な接点。「キッチン付き物件での料理体験」のように具体的に。
+- suggestedAngle: 企画の方向性指針。具体的な企画案ではなく「こういう角度で考えると良い」という戦略的方向性。
+- avoidanceNote: 戦略的に合わないアプローチの警告。法的NGではなくクリエイティブ上の理由（例:「ホテルレビュー的な比較アプローチは、あなたの世界観と相性が悪い」）。universalMustNotとの重複は禁止。
 
 brandDescription がない場合、campaignOverview と campaignRules は生成しないでください（スキーマ上 optional です）。
 ブランドの詳細が不明な状態で法的要件やNG事項を推測で生成することは危険です。
@@ -1337,6 +1366,15 @@ export async function analyzeBrandFit(
       if (!Array.isArray(cr.universalMustNot) || !cr.universalMustNot.every((v: unknown) => typeof v === "string")) {
         errors.push("campaignRules.universalMustNot");
       }
+      if (!cr.creativeDirection || typeof cr.creativeDirection !== "object") {
+        errors.push("campaignRules.creativeDirection");
+      } else {
+        const cd = cr.creativeDirection as Record<string, unknown>;
+        const cdFields = ["strategicNarrative", "creatorWorldview", "connectionPoint", "suggestedAngle", "avoidanceNote"] as const;
+        for (const field of cdFields) {
+          if (typeof cd[field] !== "string") { errors.push(`campaignRules.creativeDirection.${field}`); break; }
+        }
+      }
     }
   }
 
@@ -1491,6 +1529,18 @@ export async function analyzeBrandFit(
     campaignRules: hasBrandDescription && raw.campaignRules ? {
       universalMustDo: (raw.campaignRules as Record<string, unknown>).universalMustDo as string[],
       universalMustNot: (raw.campaignRules as Record<string, unknown>).universalMustNot as string[],
+      creativeDirection: (() => {
+        const cr = raw.campaignRules as Record<string, unknown>;
+        const cd = cr.creativeDirection as Record<string, unknown> | undefined;
+        if (!cd) return undefined;
+        return {
+          strategicNarrative: cd.strategicNarrative as string,
+          creatorWorldview: cd.creatorWorldview as string,
+          connectionPoint: cd.connectionPoint as string,
+          suggestedAngle: cd.suggestedAngle as string,
+          avoidanceNote: cd.avoidanceNote as string,
+        };
+      })(),
     } : undefined,
   };
 
