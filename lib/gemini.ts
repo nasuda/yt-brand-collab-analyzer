@@ -1323,13 +1323,17 @@ export async function analyzeBrandFit(
     }
   }
 
-  // campaignRules — スキーマの required 全フィールドを検証
+  // campaignRules — スキーマの required 全フィールドを string[] まで検証
   if (!raw.campaignRules || typeof raw.campaignRules !== "object") {
     errors.push("campaignRules");
   } else {
     const cr = raw.campaignRules as Record<string, unknown>;
-    if (!Array.isArray(cr.universalMustDo)) errors.push("campaignRules.universalMustDo");
-    if (!Array.isArray(cr.universalMustNot)) errors.push("campaignRules.universalMustNot");
+    if (!Array.isArray(cr.universalMustDo) || !cr.universalMustDo.every((v: unknown) => typeof v === "string")) {
+      errors.push("campaignRules.universalMustDo");
+    }
+    if (!Array.isArray(cr.universalMustNot) || !cr.universalMustNot.every((v: unknown) => typeof v === "string")) {
+      errors.push("campaignRules.universalMustNot");
+    }
   }
 
   if (errors.length > 0) {
@@ -1481,10 +1485,8 @@ export async function analyzeBrandFit(
       targetAudience: (raw.campaignOverview as Record<string, unknown>).targetAudience as string,
     },
     campaignRules: {
-      universalMustDo: ((raw.campaignRules as Record<string, unknown>).universalMustDo as unknown[])
-        .filter((m: unknown) => typeof m === "string") as string[],
-      universalMustNot: ((raw.campaignRules as Record<string, unknown>).universalMustNot as unknown[])
-        .filter((m: unknown) => typeof m === "string") as string[],
+      universalMustDo: (raw.campaignRules as Record<string, unknown>).universalMustDo as string[],
+      universalMustNot: (raw.campaignRules as Record<string, unknown>).universalMustNot as string[],
     },
   };
 
