@@ -261,8 +261,6 @@ const responseSchema = {
     "categoryBenchmark",
     "audiencePersona",
     "similarCreators",
-    "campaignOverview",
-    "campaignRules",
   ],
 };
 
@@ -546,7 +544,8 @@ brandDescription から施策の核となる情報を抽出し、クリエイタ
   NG: 「25-34歳の都市部在住の男女」
   OK: 「毎日を忙しく過ごしながらも、"本当にこれでいいのかな"とふと立ち止まる20-30代」
 
-brandDescription がない場合は、ブランド名と分析データから推測し、「推定」であることを明記する。
+brandDescription がない場合、campaignOverview と campaignRules は生成しないでください（スキーマ上 optional です）。
+ブランドの詳細が不明な状態で法的要件やNG事項を推測で生成することは危険です。
 
 全ての回答は日本語で返してください。`;
 
@@ -1312,27 +1311,32 @@ export async function analyzeBrandFit(
     });
   }
 
-  // campaignOverview — スキーマの required 全フィールドを検証
-  if (!raw.campaignOverview || typeof raw.campaignOverview !== "object") {
-    errors.push("campaignOverview");
-  } else {
-    const co = raw.campaignOverview as Record<string, unknown>;
-    const coRequired = ["objective", "challenge", "insight", "targetAudience"] as const;
-    for (const field of coRequired) {
-      if (typeof co[field] !== "string") { errors.push(`campaignOverview.${field}`); break; }
-    }
-  }
+  // campaignOverview / campaignRules — brandDescription がある場合のみ検証・採用
+  // brandDescription 未指定時にGeminiが推測で生成した法的要件をブリーフに載せるのは危険なため、
+  // 明示的なブランド説明がない場合はこれらを結果に含めない（fail-closed）
+  const hasBrandDescription = !!brandDescription;
 
-  // campaignRules — スキーマの required 全フィールドを string[] まで検証
-  if (!raw.campaignRules || typeof raw.campaignRules !== "object") {
-    errors.push("campaignRules");
-  } else {
-    const cr = raw.campaignRules as Record<string, unknown>;
-    if (!Array.isArray(cr.universalMustDo) || !cr.universalMustDo.every((v: unknown) => typeof v === "string")) {
-      errors.push("campaignRules.universalMustDo");
+  if (hasBrandDescription) {
+    if (!raw.campaignOverview || typeof raw.campaignOverview !== "object") {
+      errors.push("campaignOverview");
+    } else {
+      const co = raw.campaignOverview as Record<string, unknown>;
+      const coRequired = ["objective", "challenge", "insight", "targetAudience"] as const;
+      for (const field of coRequired) {
+        if (typeof co[field] !== "string") { errors.push(`campaignOverview.${field}`); break; }
+      }
     }
-    if (!Array.isArray(cr.universalMustNot) || !cr.universalMustNot.every((v: unknown) => typeof v === "string")) {
-      errors.push("campaignRules.universalMustNot");
+
+    if (!raw.campaignRules || typeof raw.campaignRules !== "object") {
+      errors.push("campaignRules");
+    } else {
+      const cr = raw.campaignRules as Record<string, unknown>;
+      if (!Array.isArray(cr.universalMustDo) || !cr.universalMustDo.every((v: unknown) => typeof v === "string")) {
+        errors.push("campaignRules.universalMustDo");
+      }
+      if (!Array.isArray(cr.universalMustNot) || !cr.universalMustNot.every((v: unknown) => typeof v === "string")) {
+        errors.push("campaignRules.universalMustNot");
+      }
     }
   }
 
@@ -1478,16 +1482,16 @@ export async function analyzeBrandFit(
     categoryBenchmark,
     audiencePersona,
     similarCreators,
-    campaignOverview: {
+    campaignOverview: hasBrandDescription && raw.campaignOverview ? {
       objective: (raw.campaignOverview as Record<string, unknown>).objective as string,
       challenge: (raw.campaignOverview as Record<string, unknown>).challenge as string,
       insight: (raw.campaignOverview as Record<string, unknown>).insight as string,
       targetAudience: (raw.campaignOverview as Record<string, unknown>).targetAudience as string,
-    },
-    campaignRules: {
+    } : undefined,
+    campaignRules: hasBrandDescription && raw.campaignRules ? {
       universalMustDo: (raw.campaignRules as Record<string, unknown>).universalMustDo as string[],
       universalMustNot: (raw.campaignRules as Record<string, unknown>).universalMustNot as string[],
-    },
+    } : undefined,
   };
 
   return result;
