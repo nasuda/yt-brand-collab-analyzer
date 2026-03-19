@@ -255,6 +255,11 @@ const responseSchema = {
           required: ["strategicNarrative", "creatorWorldview", "connectionPoint", "suggestedAngle", "avoidanceNote"],
           description: "クリエイター別クリエイティブ方向性。同じブランドでもクリエイターが違えば全く異なる方向性になること",
         },
+        inspirationSeeds: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "企画の種（2-3個）。クリエイターの得意パターン×ブランド機会の掛け合わせを一行で。企画案ではなく思考のきっかけ。クリエイターの具体的な動画タイトルやパターンを参照すること。",
+        },
       },
       required: ["universalMustDo", "universalMustNot", "creativeDirection"],
       description: "キャンペーン全体に共通するルール（個別企画のbrandMustDo/brandMustNotとは別。重複禁止）+ クリエイター別方向性",
@@ -572,6 +577,15 @@ campaignRules 内にクリエイター別のクリエイティブ方向性を生
 - connectionPoint: 世界観とブランド課題の具体的な接点。「キッチン付き物件での料理体験」のように具体的に。
 - suggestedAngle: 企画の方向性指針。具体的な企画案ではなく「こういう角度で考えると良い」という戦略的方向性。
 - avoidanceNote: 戦略的に合わないアプローチの警告。法的NGではなくクリエイティブ上の理由（例:「ホテルレビュー的な比較アプローチは、あなたの世界観と相性が悪い」）。universalMustNotとの重複は禁止。
+
+### インスピレーションシード（inspirationSeeds）
+クリエイターの得意パターンとブランド機会の「掛け合わせの方程式」を2-3個。
+- 各シード一行（30-50字）
+- 「あなたの"○○" × ブランドの"△△" → ？」形式
+- "○○"にはクリエイターの具体的な動画タイトル・パターンを入れる
+- "△△"にはブランド課題・商品特性を入れる
+- 「→ ？」で終え、クリエイター自身が答えを考える余白を残す
+- collabIdeasの企画タイトルそのままは禁止（あくまで「種」）
 
 brandDescription がない場合、campaignOverview と campaignRules は生成しないでください（スキーマ上 optional です）。
 ブランドの詳細が不明な状態で法的要件やNG事項を推測で生成することは危険です。
@@ -1375,6 +1389,11 @@ export async function analyzeBrandFit(
           if (typeof cd[field] !== "string") { errors.push(`campaignRules.creativeDirection.${field}`); break; }
         }
       }
+      if ("inspirationSeeds" in cr) {
+        if (!Array.isArray(cr.inspirationSeeds) || !cr.inspirationSeeds.every((v: unknown) => typeof v === "string")) {
+          errors.push("campaignRules.inspirationSeeds");
+        }
+      }
     }
   }
 
@@ -1540,6 +1559,13 @@ export async function analyzeBrandFit(
           suggestedAngle: cd.suggestedAngle as string,
           avoidanceNote: cd.avoidanceNote as string,
         };
+      })(),
+      inspirationSeeds: (() => {
+        const cr = raw.campaignRules as Record<string, unknown>;
+        if (Array.isArray(cr.inspirationSeeds) && cr.inspirationSeeds.every((v: unknown) => typeof v === "string")) {
+          return cr.inspirationSeeds as string[];
+        }
+        return undefined;
       })(),
     } : undefined,
   };
