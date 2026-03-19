@@ -184,6 +184,7 @@ export interface CampaignRules {
   universalMustDo: string[];   // 全企画共通の必須要件（PR表記、法的義務等）
   universalMustNot: string[];  // 全企画共通のNG事項
   creativeDirection?: CreativeDirection;  // クリエイター別クリエイティブ方向性
+  inspirationSeeds?: string[];  // 企画の種（2-3個、クリエイターパターン×ブランド機会の掛け合わせ）
 }
 
 export interface BrandFitAnalysis {
