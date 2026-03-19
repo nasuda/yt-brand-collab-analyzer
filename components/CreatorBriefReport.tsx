@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef } from "react";
-import { CampaignOverview, CampaignRules } from "@/lib/types";
+import { CampaignOverview, CampaignRules, CreativeDirection } from "@/lib/types";
 
 export interface CreatorBriefProps {
   brandName: string;
@@ -44,6 +44,66 @@ const listItem: React.CSSProperties = {
   marginBottom: "3px",
   lineHeight: 1.5,
 };
+
+function CreativeDirectionSection({ direction, channelName }: { direction: CreativeDirection; channelName: string }) {
+  return (
+    <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px dashed #d1d5db" }}>
+      <div style={{ fontSize: "12px", fontWeight: 700, color: ACCENT_DARK, marginBottom: "10px" }}>
+        {channelName} 様のクリエイティブ方向性
+      </div>
+
+      {/* 戦略的ナラティブ — メインの出力 */}
+      <div
+        style={{
+          padding: "12px 14px",
+          background: "#eff6ff",
+          borderLeft: `4px solid ${ACCENT}`,
+          borderRadius: "0 6px 6px 0",
+          marginBottom: "12px",
+        }}
+      >
+        <div style={{ fontSize: "10px", fontWeight: 600, color: ACCENT, marginBottom: "4px" }}>
+          戦略的ナラティブ
+        </div>
+        <p style={{ fontSize: "11px", color: "#1e3a5f", lineHeight: 1.7, margin: 0 }}>
+          {direction.strategicNarrative}
+        </p>
+      </div>
+
+      {/* 3カラム: 世界観 / 接点 / 推奨角度 */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+        <div>
+          <div style={labelStyle}>あなたの世界観</div>
+          <div style={valueStyle}>{direction.creatorWorldview}</div>
+        </div>
+        <div>
+          <div style={labelStyle}>ブランドとの接点</div>
+          <div style={valueStyle}>{direction.connectionPoint}</div>
+        </div>
+        <div>
+          <div style={labelStyle}>推奨する角度</div>
+          <div style={valueStyle}>{direction.suggestedAngle}</div>
+        </div>
+      </div>
+
+      {/* 注意事項 */}
+      <div
+        style={{
+          padding: "8px 12px",
+          background: "#fef9ee",
+          borderLeft: "3px solid #f59e0b",
+          borderRadius: "0 4px 4px 0",
+          fontSize: "10px",
+          color: "#92400e",
+          lineHeight: 1.6,
+        }}
+      >
+        <span style={{ fontWeight: 600 }}>&#x26A0; 注意: </span>
+        {direction.avoidanceNote}
+      </div>
+    </div>
+  );
+}
 
 export const CreatorBriefReport = forwardRef<HTMLDivElement, CreatorBriefProps>(
   function CreatorBriefReport({ brandName, channelName, campaignOverview, campaignRules, brandAlignmentReasoning }, ref) {
@@ -188,6 +248,14 @@ export const CreatorBriefReport = forwardRef<HTMLDivElement, CreatorBriefProps>(
                 </div>
               )}
             </div>
+
+            {/* クリエイティブ方向性 */}
+            {campaignRules.creativeDirection && (
+              <CreativeDirectionSection
+                direction={campaignRules.creativeDirection}
+                channelName={channelName}
+              />
+            )}
           </div>
         )}
 
