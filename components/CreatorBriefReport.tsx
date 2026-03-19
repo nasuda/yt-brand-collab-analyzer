@@ -9,6 +9,8 @@ export interface CreatorBriefProps {
   campaignOverview?: CampaignOverview;
   campaignRules?: CampaignRules;
   brandAlignmentReasoning: string;
+  contentStyleSummary?: string;
+  strengths?: string[];
 }
 
 const ACCENT = "#4f46e5";
@@ -47,7 +49,7 @@ const listItem: React.CSSProperties = {
 
 function CreativeDirectionSection({ direction, channelName }: { direction: CreativeDirection; channelName: string }) {
   return (
-    <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px dashed #d1d5db" }}>
+    <div>
       <div style={{ fontSize: "12px", fontWeight: 700, color: ACCENT_DARK, marginBottom: "10px" }}>
         {channelName} 様のクリエイティブ方向性
       </div>
@@ -105,13 +107,78 @@ function CreativeDirectionSection({ direction, channelName }: { direction: Creat
   );
 }
 
+function ContentAnalysisSection({ contentStyleSummary, strengths, channelName }: { contentStyleSummary: string; strengths: string[]; channelName: string }) {
+  const displayStrengths = strengths.slice(0, 3);
+
+  return (
+    <div>
+      <div style={{ fontSize: "12px", fontWeight: 700, color: "#4338ca", marginBottom: "10px" }}>
+        {channelName} 様のコンテンツを拝見して
+      </div>
+
+      <p style={{ fontSize: "11px", color: "#312e81", lineHeight: 1.7, marginBottom: "12px" }}>
+        {contentStyleSummary}
+      </p>
+
+      {displayStrengths.length > 0 && (
+        <div>
+          <div style={{ fontSize: "10px", fontWeight: 600, color: "#4338ca", marginBottom: "6px" }}>
+            特に注目しているポイント
+          </div>
+          {displayStrengths.map((s, i) => (
+            <div key={i} style={{ ...listItem, color: "#312e81", paddingLeft: "12px", position: "relative" }}>
+              <span style={{ position: "absolute", left: 0, color: "#6366f1" }}>&#x2022;</span>
+              {s}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InspirationSeedsSection({ seeds }: { seeds: string[] }) {
+  return (
+    <div>
+      <div style={{ fontSize: "12px", fontWeight: 700, color: "#92400e", marginBottom: "10px" }}>
+        企画のヒント
+      </div>
+      <p style={{ fontSize: "10px", color: "#78350f", marginBottom: "10px", lineHeight: 1.5 }}>
+        以下は企画を考える際の「種」です。具体的な企画案ではなく、思考のきっかけとしてご活用ください。
+      </p>
+      {seeds.map((seed, i) => (
+        <div
+          key={i}
+          style={{
+            padding: "8px 12px",
+            background: "#fffbeb",
+            borderLeft: "3px solid #f59e0b",
+            borderRadius: "0 4px 4px 0",
+            marginBottom: "6px",
+            fontSize: "11px",
+            color: "#78350f",
+            lineHeight: 1.6,
+          }}
+        >
+          {seed}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export const CreatorBriefReport = forwardRef<HTMLDivElement, CreatorBriefProps>(
-  function CreatorBriefReport({ brandName, channelName, campaignOverview, campaignRules, brandAlignmentReasoning }, ref) {
+  function CreatorBriefReport({ brandName, channelName, campaignOverview, campaignRules, brandAlignmentReasoning, contentStyleSummary, strengths }, ref) {
     const today = new Date().toLocaleDateString("ja-JP", {
       year: "numeric",
       month: "long",
       day: "numeric",
     });
+
+    const hasContentAnalysis = !!(contentStyleSummary && strengths && strengths.length > 0);
+    const hasCreativeDirection = !!campaignRules?.creativeDirection;
+    const hasInspirationSeeds = !!(campaignRules?.inspirationSeeds && campaignRules.inspirationSeeds.length > 0);
+    const hasPostingRules = !!(campaignRules && (campaignRules.universalMustDo.length > 0 || campaignRules.universalMustNot.length > 0));
 
     return (
       <div
@@ -219,43 +286,73 @@ export const CreatorBriefReport = forwardRef<HTMLDivElement, CreatorBriefProps>(
           </div>
         )}
 
-        {/* 投稿指示書（共通ルール） */}
-        {campaignRules && (campaignRules.universalMustDo.length > 0 || campaignRules.universalMustNot.length > 0 || campaignRules.creativeDirection) && (
+        {/* コンテンツ分析 — "あなたのコンテンツを拝見して" */}
+        {hasContentAnalysis && (
+          <div data-section="content-analysis" style={{ padding: "8mm 20mm" }}>
+            <div
+              style={{
+                padding: "14px 16px",
+                background: "#eef2ff",
+                borderLeft: "4px solid #6366f1",
+                borderRadius: "0 8px 8px 0",
+              }}
+            >
+              <ContentAnalysisSection
+                contentStyleSummary={contentStyleSummary!}
+                strengths={strengths!}
+                channelName={channelName}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* クリエイティブ方向性 — 独立セクション */}
+        {hasCreativeDirection && (
+          <div data-section="creative-direction" style={{ padding: "8mm 20mm" }}>
+            <h2 style={sectionTitle}>クリエイティブ方向性</h2>
+            <CreativeDirectionSection
+              direction={campaignRules!.creativeDirection!}
+              channelName={channelName}
+            />
+          </div>
+        )}
+
+        {/* 企画のヒント — インスピレーションシード */}
+        {hasInspirationSeeds && (
+          <div data-section="inspiration-seeds" style={{ padding: "8mm 20mm" }}>
+            <InspirationSeedsSection seeds={campaignRules!.inspirationSeeds!} />
+          </div>
+        )}
+
+        {/* 投稿指示書（Must/NG のみ） */}
+        {hasPostingRules && (
           <div data-section="posting-rules" style={{ padding: "8mm 20mm" }}>
             <h2 style={sectionTitle}>投稿指示書</h2>
             <p style={{ ...valueStyle, color: "#6b7280", marginBottom: "12px" }}>
               全コンテンツに共通して適用されるルールです。企画の内容に関わらず、必ずお守りください。
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-              {campaignRules.universalMustDo.length > 0 && (
+              {campaignRules!.universalMustDo.length > 0 && (
                 <div>
                   <div style={{ fontSize: "11px", fontWeight: 600, color: "#166534", marginBottom: "6px" }}>
                     必須要件
                   </div>
-                  {campaignRules.universalMustDo.map((item, i) => (
+                  {campaignRules!.universalMustDo.map((item, i) => (
                     <div key={i} style={listItem}>&#x2713; {item}</div>
                   ))}
                 </div>
               )}
-              {campaignRules.universalMustNot.length > 0 && (
+              {campaignRules!.universalMustNot.length > 0 && (
                 <div>
                   <div style={{ fontSize: "11px", fontWeight: 600, color: "#991b1b", marginBottom: "6px" }}>
                     NG事項
                   </div>
-                  {campaignRules.universalMustNot.map((item, i) => (
+                  {campaignRules!.universalMustNot.map((item, i) => (
                     <div key={i} style={listItem}>&#x2717; {item}</div>
                   ))}
                 </div>
               )}
             </div>
-
-            {/* クリエイティブ方向性 */}
-            {campaignRules.creativeDirection && (
-              <CreativeDirectionSection
-                direction={campaignRules.creativeDirection}
-                channelName={channelName}
-              />
-            )}
           </div>
         )}
 
@@ -264,7 +361,8 @@ export const CreatorBriefReport = forwardRef<HTMLDivElement, CreatorBriefProps>(
           <h2 style={sectionTitle}>企画について</h2>
           <p style={valueStyle}>
             企画の方向性は {channelName} 様にお任せいたします。
-            上記の施策概要・投稿指示書を踏まえたうえで、
+            {hasCreativeDirection && "上記のクリエイティブ方向性を参考に、"}
+            {hasInspirationSeeds && "企画のヒントもご活用いただきながら、"}
             {channelName} 様ならではの視点と世界観を活かしたコンテンツをご制作ください。
           </p>
           <p style={{ ...valueStyle, fontStyle: "italic", color: "#6b7280" }}>

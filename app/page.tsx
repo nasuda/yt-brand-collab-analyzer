@@ -76,6 +76,8 @@ export default function Home() {
             campaignOverview={result.analysis.campaignOverview}
             campaignRules={result.analysis.campaignRules}
             brandAlignmentReasoning={result.analysis.brandAlignmentReasoning}
+            contentStyleSummary={result.analysis.contentStyleSummary}
+            strengths={result.analysis.strengths}
           />
         );
 

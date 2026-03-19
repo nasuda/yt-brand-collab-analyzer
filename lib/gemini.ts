@@ -255,7 +255,6 @@ const responseSchema = {
           required: ["strategicNarrative", "creatorWorldview", "connectionPoint", "suggestedAngle", "avoidanceNote"],
           description: "クリエイター別クリエイティブ方向性。同じブランドでもクリエイターが違えば全く異なる方向性になること",
         },
-      },
         inspirationSeeds: {
           type: Type.ARRAY,
           items: { type: Type.STRING },
