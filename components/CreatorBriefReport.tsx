@@ -220,7 +220,7 @@ export const CreatorBriefReport = forwardRef<HTMLDivElement, CreatorBriefProps>(
         )}
 
         {/* 投稿指示書（共通ルール） */}
-        {campaignRules && (campaignRules.universalMustDo.length > 0 || campaignRules.universalMustNot.length > 0) && (
+        {campaignRules && (campaignRules.universalMustDo.length > 0 || campaignRules.universalMustNot.length > 0 || campaignRules.creativeDirection) && (
           <div data-section="posting-rules" style={{ padding: "8mm 20mm" }}>
             <h2 style={sectionTitle}>投稿指示書</h2>
             <p style={{ ...valueStyle, color: "#6b7280", marginBottom: "12px" }}>
