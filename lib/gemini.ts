@@ -1389,7 +1389,7 @@ export async function analyzeBrandFit(
           if (typeof cd[field] !== "string") { errors.push(`campaignRules.creativeDirection.${field}`); break; }
         }
       }
-      if (cr.inspirationSeeds) {
+      if ("inspirationSeeds" in cr) {
         if (!Array.isArray(cr.inspirationSeeds) || !cr.inspirationSeeds.every((v: unknown) => typeof v === "string")) {
           errors.push("campaignRules.inspirationSeeds");
         }
