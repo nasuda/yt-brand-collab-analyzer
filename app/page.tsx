@@ -13,7 +13,8 @@ import { CreatorBriefReport } from "@/components/CreatorBriefReport";
 import { IdeaSheetReport } from "@/components/IdeaSheetReport";
 import { CollabIdea } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { RotateCcw, FileText, FileDown } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { RotateCcw, FileText, FileDown, AlertTriangle } from "lucide-react";
 
 export default function Home() {
   const { status, result, comparisonResult, error, loadingStep, mode, analyze, compare, reset } =
@@ -22,7 +23,10 @@ export default function Home() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [exportingBrief, setExportingBrief] = useState(false);
   const [exportingBriefIndex, setExportingBriefIndex] = useState<number | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const reportContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const isAnyExporting = exporting || exportingBrief || exportingBriefIndex !== null;
 
   const handleGenerateReport = useCallback(
     async (settings: ReportSettings) => {
@@ -60,6 +64,7 @@ export default function Home() {
     async () => {
       if (!result) return;
       setExportingBrief(true);
+      setExportError(null);
 
       const container = document.createElement("div");
       const root = createRoot(container);
@@ -83,9 +88,9 @@ export default function Home() {
         const channelName = result.channel.title || "creator";
         await exportReport(container, `${channelName}_x_${result.brandName}_ブリーフ`);
         root.unmount();
-      } catch (err) {
+      } catch {
         root.unmount();
-        console.error("Brief export failed:", err);
+        setExportError("ブリーフの生成に失敗しました。もう一度お試しください。");
       } finally {
         setExportingBrief(false);
       }
@@ -100,6 +105,7 @@ export default function Home() {
 
       const ideaIndex = result.analysis.collabIdeas.indexOf(idea);
       setExportingBriefIndex(ideaIndex >= 0 ? ideaIndex : 0);
+      setExportError(null);
 
       const container = document.createElement("div");
       const root = createRoot(container);
@@ -122,9 +128,9 @@ export default function Home() {
         const safeTitle = idea.title.replace(/[/\\?%*:|"<>]/g, "_").slice(0, 30);
         await exportReport(container, `${channelName}_企画シート_${safeTitle}`);
         root.unmount();
-      } catch (err) {
+      } catch {
         root.unmount();
-        console.error("Idea sheet export failed:", err);
+        setExportError("企画シートの生成に失敗しました。もう一度お試しください。");
       } finally {
         setExportingBriefIndex(null);
       }
@@ -162,7 +168,7 @@ export default function Home() {
                   <Button
                     variant="outline"
                     onClick={handleExportMainBrief}
-                    disabled={exporting || exportingBrief}
+                    disabled={isAnyExporting}
                   >
                     <FileDown className="h-4 w-4" />
                     {exportingBrief ? "ブリーフ生成中..." : "クリエイターブリーフ"}
@@ -170,7 +176,7 @@ export default function Home() {
                   <Button
                     variant="outline"
                     onClick={() => setShowReportModal(true)}
-                    disabled={exporting}
+                    disabled={isAnyExporting}
                   >
                     <FileText className="h-4 w-4" />
                     {exporting ? "レポート生成中..." : "レポート出力"}
@@ -184,10 +190,20 @@ export default function Home() {
             </div>
           )}
 
+          {exportError && (
+            <Card className="border-destructive">
+              <CardContent className="flex items-center gap-3 py-4">
+                <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
+                <p className="text-sm text-destructive">{exportError}</p>
+              </CardContent>
+            </Card>
+          )}
+
           <AnalysisResults
             state={{ status, result, comparisonResult, error, loadingStep, mode }}
             onExportIdeaSheet={handleExportIdeaSheet}
             exportingBriefIndex={exportingBriefIndex}
+            isExporting={isAnyExporting}
           />
         </div>
       </div>

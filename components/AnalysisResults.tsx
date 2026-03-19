@@ -17,9 +17,10 @@ interface AnalysisResultsProps {
   state: AnalysisState;
   onExportIdeaSheet?: (idea: CollabIdea) => void;
   exportingBriefIndex?: number | null;
+  isExporting?: boolean;
 }
 
-export function AnalysisResults({ state, onExportIdeaSheet, exportingBriefIndex }: AnalysisResultsProps) {
+export function AnalysisResults({ state, onExportIdeaSheet, exportingBriefIndex, isExporting }: AnalysisResultsProps) {
   if (state.status === "idle") return null;
 
   if (state.status === "loading") {
@@ -73,6 +74,7 @@ export function AnalysisResults({ state, onExportIdeaSheet, exportingBriefIndex 
         ideas={analysis.collabIdeas}
         onExportIdeaSheet={onExportIdeaSheet}
         exportingBriefIndex={exportingBriefIndex}
+        isExporting={isExporting}
       />
       <VideoList videos={videos} />
     </div>

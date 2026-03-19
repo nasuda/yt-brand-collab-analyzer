@@ -10,6 +10,7 @@ interface CollabIdeasProps {
   ideas: CollabIdea[];
   onExportIdeaSheet?: (idea: CollabIdea) => void;
   exportingBriefIndex?: number | null;
+  isExporting?: boolean;
 }
 
 function getFeasibilityStyle(f: string) {
@@ -62,7 +63,7 @@ function hasDistributionStrategy(idea: CollabIdea): boolean {
   return !!(d && (d.adProduct || d.mixStrategy || d.audienceTargeting || d.budgetAllocation));
 }
 
-export function CollabIdeas({ ideas, onExportIdeaSheet, exportingBriefIndex }: CollabIdeasProps) {
+export function CollabIdeas({ ideas, onExportIdeaSheet, exportingBriefIndex, isExporting }: CollabIdeasProps) {
   const [openPostingIds, setOpenPostingIds] = useState<Set<number>>(new Set());
   const [openDistributionIds, setOpenDistributionIds] = useState<Set<number>>(new Set());
 
@@ -343,7 +344,7 @@ export function CollabIdeas({ ideas, onExportIdeaSheet, exportingBriefIndex }: C
                 <button
                   type="button"
                   onClick={() => onExportIdeaSheet(idea)}
-                  disabled={exportingBriefIndex === i}
+                  disabled={isExporting || exportingBriefIndex !== null}
                   className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50 rounded-md border border-amber-200 dark:border-amber-800 transition-colors disabled:opacity-50"
                 >
                   <FileDown className="h-4 w-4" />
