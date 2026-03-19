@@ -175,7 +175,7 @@ export const CreatorBriefReport = forwardRef<HTMLDivElement, CreatorBriefProps>(
       day: "numeric",
     });
 
-    const hasContentAnalysis = !!(contentStyleSummary && strengths && strengths.length > 0);
+    const hasContentAnalysis = !!contentStyleSummary;
     const hasCreativeDirection = !!campaignRules?.creativeDirection;
     const hasInspirationSeeds = !!(campaignRules?.inspirationSeeds && campaignRules.inspirationSeeds.length > 0);
     const hasPostingRules = !!(campaignRules && (campaignRules.universalMustDo.length > 0 || campaignRules.universalMustNot.length > 0));
@@ -299,7 +299,7 @@ export const CreatorBriefReport = forwardRef<HTMLDivElement, CreatorBriefProps>(
             >
               <ContentAnalysisSection
                 contentStyleSummary={contentStyleSummary!}
-                strengths={strengths!}
+                strengths={strengths ?? []}
                 channelName={channelName}
               />
             </div>
