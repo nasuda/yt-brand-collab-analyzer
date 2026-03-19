@@ -4,10 +4,13 @@ import { useState } from "react";
 import { CollabIdea } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Lightbulb, Sparkles, Target, Shield, Zap, FileEdit, Megaphone, ChevronDown, ChevronRight, Users, Eye, CheckCircle2, XCircle, Palette, MessageSquare } from "lucide-react";
+import { Lightbulb, Sparkles, Target, Shield, Zap, FileEdit, Megaphone, ChevronDown, ChevronRight, Users, Eye, CheckCircle2, XCircle, Palette, MessageSquare, FileDown } from "lucide-react";
 
 interface CollabIdeasProps {
   ideas: CollabIdea[];
+  onExportIdeaSheet?: (idea: CollabIdea) => void;
+  exportingBriefIndex?: number | null;
+  isExporting?: boolean;
 }
 
 function getFeasibilityStyle(f: string) {
@@ -60,7 +63,7 @@ function hasDistributionStrategy(idea: CollabIdea): boolean {
   return !!(d && (d.adProduct || d.mixStrategy || d.audienceTargeting || d.budgetAllocation));
 }
 
-export function CollabIdeas({ ideas }: CollabIdeasProps) {
+export function CollabIdeas({ ideas, onExportIdeaSheet, exportingBriefIndex, isExporting }: CollabIdeasProps) {
   const [openPostingIds, setOpenPostingIds] = useState<Set<number>>(new Set());
   const [openDistributionIds, setOpenDistributionIds] = useState<Set<number>>(new Set());
 
@@ -334,6 +337,19 @@ export function CollabIdeas({ ideas }: CollabIdeasProps) {
                     </div>
                   )}
                 </div>
+              )}
+
+              {/* 企画シート出力ボタン（別紙） */}
+              {onExportIdeaSheet && (
+                <button
+                  type="button"
+                  onClick={() => onExportIdeaSheet(idea)}
+                  disabled={isExporting || exportingBriefIndex !== null}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50 rounded-md border border-amber-200 dark:border-amber-800 transition-colors disabled:opacity-50"
+                >
+                  <FileDown className="h-4 w-4" />
+                  {exportingBriefIndex === i ? "企画シート生成中..." : "企画シート出力（別紙）"}
+                </button>
               )}
             </div>
           ))}

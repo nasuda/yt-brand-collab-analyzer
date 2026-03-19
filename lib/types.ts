@@ -108,8 +108,8 @@ export interface PostingInstruction {
   descriptionBoxSuggestion: string; // 概要欄テンプレート
   keyMessages: string[];            // キーメッセージ（3〜5個）
   toneAndManner: string;            // トーン&マナー
-  brandMustDo: string[];            // ブランド必須要件（法的義務・訴求必須ポイント、3-5個）
-  brandMustNot: string[];           // NG行為・表現（絶対やってはいけないこと、2-4個）
+  brandMustDo: string[];            // この企画固有のブランド必須要件（1-3個）
+  brandMustNot: string[];           // この企画固有のNG行為・表現（0-2個）
   creatorFreedom: string[];         // クリエイターの自由裁量領域（3-5個）
   creatorContext: string;           // この企画がこのクリエイターに合う理由（動画・コメント分析に基づく根拠）
   sampleOpening: string;            // クリエイターの話し方で書いた導入例（30-50字）
@@ -165,6 +165,18 @@ export interface SimilarCreator {
   reason: string;
 }
 
+export interface CampaignOverview {
+  objective: string;       // 施策の目的（何を達成したいか）
+  challenge: string;       // 課題感・背景（なぜこの施策が必要か）
+  insight: string;         // ターゲットインサイト（ターゲットの心理・行動の核心）
+  targetAudience: string;  // ターゲット像（誰に届けたいか）
+}
+
+export interface CampaignRules {
+  universalMustDo: string[];   // 全企画共通の必須要件（PR表記、法的義務等）
+  universalMustNot: string[];  // 全企画共通のNG事項
+}
+
 export interface BrandFitAnalysis {
   overallScore: number;
   scoreBreakdown: ScoreBreakdown;
@@ -178,6 +190,8 @@ export interface BrandFitAnalysis {
   categoryBenchmark: CategoryBenchmark;
   audiencePersona: AudiencePersona;
   similarCreators: SimilarCreator[];
+  campaignOverview?: CampaignOverview;
+  campaignRules?: CampaignRules;
 }
 
 export interface ChannelMetrics {
