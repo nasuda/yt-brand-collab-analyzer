@@ -172,9 +172,18 @@ export interface CampaignOverview {
   targetAudience: string;  // ターゲット像（誰に届けたいか）
 }
 
+export interface CreativeDirection {
+  strategicNarrative: string;   // クリエイターの世界観×ブランド課題の戦略的方向性（2-3文）
+  creatorWorldview: string;     // このクリエイターの世界観を一言で要約
+  connectionPoint: string;      // 世界観とブランド課題が交差するポイント
+  suggestedAngle: string;       // 推奨する戦略的アングル（企画案ではなく方向性）
+  avoidanceNote: string;        // この組み合わせで避けるべきアプローチ
+}
+
 export interface CampaignRules {
   universalMustDo: string[];   // 全企画共通の必須要件（PR表記、法的義務等）
   universalMustNot: string[];  // 全企画共通のNG事項
+  creativeDirection?: CreativeDirection;  // クリエイター別クリエイティブ方向性
 }
 
 export interface BrandFitAnalysis {
