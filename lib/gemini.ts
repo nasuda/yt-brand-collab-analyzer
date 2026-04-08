@@ -1363,45 +1363,41 @@ export async function analyzeBrandFit(
     });
   }
 
-  // campaignOverview / campaignRules — brandDescription がある場合のみ検証・採用
-  // brandDescription 未指定時にGeminiが推測で生成した法的要件をブリーフに載せるのは危険なため、
-  // 明示的なブランド説明がない場合はこれらを結果に含めない（fail-closed）
-  const hasBrandDescription = !!brandDescription;
+  // campaignOverview / campaignRules — schema 上 required なので brandDescription の有無に関わらず検証
+  // brandDescription 未指定時も最低限の共通ルール（PR表記等）を Gemini が生成する仕様に変更したため、
+  // 常に検証・採用する。プロンプト側で「brandDescription 不明時は推測の法的要件は出さない」よう制御。
+  if (!raw.campaignOverview || typeof raw.campaignOverview !== "object") {
+    errors.push("campaignOverview");
+  } else {
+    const co = raw.campaignOverview as Record<string, unknown>;
+    const coRequired = ["objective", "challenge", "insight", "targetAudience"] as const;
+    for (const field of coRequired) {
+      if (typeof co[field] !== "string") { errors.push(`campaignOverview.${field}`); break; }
+    }
+  }
 
-  if (hasBrandDescription) {
-    if (!raw.campaignOverview || typeof raw.campaignOverview !== "object") {
-      errors.push("campaignOverview");
+  if (!raw.campaignRules || typeof raw.campaignRules !== "object") {
+    errors.push("campaignRules");
+  } else {
+    const cr = raw.campaignRules as Record<string, unknown>;
+    if (!Array.isArray(cr.universalMustDo) || !cr.universalMustDo.every((v: unknown) => typeof v === "string")) {
+      errors.push("campaignRules.universalMustDo");
+    }
+    if (!Array.isArray(cr.universalMustNot) || !cr.universalMustNot.every((v: unknown) => typeof v === "string")) {
+      errors.push("campaignRules.universalMustNot");
+    }
+    if (!cr.creativeDirection || typeof cr.creativeDirection !== "object") {
+      errors.push("campaignRules.creativeDirection");
     } else {
-      const co = raw.campaignOverview as Record<string, unknown>;
-      const coRequired = ["objective", "challenge", "insight", "targetAudience"] as const;
-      for (const field of coRequired) {
-        if (typeof co[field] !== "string") { errors.push(`campaignOverview.${field}`); break; }
+      const cd = cr.creativeDirection as Record<string, unknown>;
+      const cdFields = ["strategicNarrative", "creatorWorldview", "connectionPoint", "suggestedAngle", "avoidanceNote"] as const;
+      for (const field of cdFields) {
+        if (typeof cd[field] !== "string") { errors.push(`campaignRules.creativeDirection.${field}`); break; }
       }
     }
-
-    if (!raw.campaignRules || typeof raw.campaignRules !== "object") {
-      errors.push("campaignRules");
-    } else {
-      const cr = raw.campaignRules as Record<string, unknown>;
-      if (!Array.isArray(cr.universalMustDo) || !cr.universalMustDo.every((v: unknown) => typeof v === "string")) {
-        errors.push("campaignRules.universalMustDo");
-      }
-      if (!Array.isArray(cr.universalMustNot) || !cr.universalMustNot.every((v: unknown) => typeof v === "string")) {
-        errors.push("campaignRules.universalMustNot");
-      }
-      if (!cr.creativeDirection || typeof cr.creativeDirection !== "object") {
-        errors.push("campaignRules.creativeDirection");
-      } else {
-        const cd = cr.creativeDirection as Record<string, unknown>;
-        const cdFields = ["strategicNarrative", "creatorWorldview", "connectionPoint", "suggestedAngle", "avoidanceNote"] as const;
-        for (const field of cdFields) {
-          if (typeof cd[field] !== "string") { errors.push(`campaignRules.creativeDirection.${field}`); break; }
-        }
-      }
-      if ("inspirationSeeds" in cr) {
-        if (!Array.isArray(cr.inspirationSeeds) || !cr.inspirationSeeds.every((v: unknown) => typeof v === "string")) {
-          errors.push("campaignRules.inspirationSeeds");
-        }
+    if ("inspirationSeeds" in cr) {
+      if (!Array.isArray(cr.inspirationSeeds) || !cr.inspirationSeeds.every((v: unknown) => typeof v === "string")) {
+        errors.push("campaignRules.inspirationSeeds");
       }
     }
   }
@@ -1548,13 +1544,13 @@ export async function analyzeBrandFit(
     categoryBenchmark,
     audiencePersona,
     similarCreators,
-    campaignOverview: hasBrandDescription && raw.campaignOverview ? {
+    campaignOverview: raw.campaignOverview ? {
       objective: (raw.campaignOverview as Record<string, unknown>).objective as string,
       challenge: (raw.campaignOverview as Record<string, unknown>).challenge as string,
       insight: (raw.campaignOverview as Record<string, unknown>).insight as string,
       targetAudience: (raw.campaignOverview as Record<string, unknown>).targetAudience as string,
     } : undefined,
-    campaignRules: hasBrandDescription && raw.campaignRules ? {
+    campaignRules: raw.campaignRules ? {
       universalMustDo: (raw.campaignRules as Record<string, unknown>).universalMustDo as string[],
       universalMustNot: (raw.campaignRules as Record<string, unknown>).universalMustNot as string[],
       creativeDirection: (() => {
