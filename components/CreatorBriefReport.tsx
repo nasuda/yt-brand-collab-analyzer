@@ -75,7 +75,7 @@ function CreativeDirectionSection({ direction, channelName }: { direction: Creat
       {/* 3カラム: 世界観 / 接点 / 推奨角度 */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", marginBottom: "10px" }}>
         <div>
-          <div style={labelStyle}>あなたの世界観</div>
+          <div style={labelStyle}>{channelName}さんの世界観</div>
           <div style={valueStyle}>{direction.creatorWorldview}</div>
         </div>
         <div>
@@ -100,7 +100,7 @@ function CreativeDirectionSection({ direction, channelName }: { direction: Creat
           lineHeight: 1.6,
         }}
       >
-        <span style={{ fontWeight: 600 }}>&#x26A0; 注意: </span>
+        <span style={{ fontWeight: 600 }}>&#x26A0; ご留意点: </span>
         {direction.avoidanceNote}
       </div>
     </div>
@@ -265,7 +265,7 @@ export const CreatorBriefReport = forwardRef<HTMLDivElement, CreatorBriefProps>(
           </div>
         )}
 
-        {/* なぜあなたか */}
+        {/* なぜこのクリエイターか */}
         {brandAlignmentReasoning && (
           <div data-section="why-you" style={{ padding: "8mm 20mm" }}>
             <div
@@ -286,7 +286,7 @@ export const CreatorBriefReport = forwardRef<HTMLDivElement, CreatorBriefProps>(
           </div>
         )}
 
-        {/* コンテンツ分析 — "あなたのコンテンツを拝見して" */}
+        {/* コンテンツ分析 — "○○様のコンテンツを拝見して" */}
         {hasContentAnalysis && (
           <div data-section="content-analysis" style={{ padding: "8mm 20mm" }}>
             <div
@@ -324,57 +324,59 @@ export const CreatorBriefReport = forwardRef<HTMLDivElement, CreatorBriefProps>(
           </div>
         )}
 
-        {/* 投稿指示書（Must/NG のみ） */}
-        {hasPostingRules && (
-          <div data-section="posting-rules" style={{ padding: "8mm 20mm" }}>
-            <h2 style={sectionTitle}>投稿指示書</h2>
-            <p style={{ ...valueStyle, color: "#6b7280", marginBottom: "12px" }}>
-              全コンテンツに共通して適用されるルールです。企画の内容に関わらず、必ずお守りください。
-            </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-              {campaignRules!.universalMustDo.length > 0 && (
-                <div>
-                  <div style={{ fontSize: "11px", fontWeight: 600, color: "#166534", marginBottom: "6px" }}>
-                    必須要件
+        {/* 投稿指示書 + 企画について + フッター（同一ページに収める） */}
+        <div data-section="posting-and-closing" style={{ pageBreakInside: "avoid" }}>
+          {hasPostingRules && (
+            <div style={{ padding: "8mm 20mm 4mm" }}>
+              <h2 style={sectionTitle}>投稿指示書</h2>
+              <p style={{ ...valueStyle, color: "#6b7280", marginBottom: "12px" }}>
+                全コンテンツに共通して適用されるルールです。企画の内容に関わらず、必ずお守りください。
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                {campaignRules!.universalMustDo.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: "11px", fontWeight: 600, color: "#166534", marginBottom: "6px" }}>
+                      必須要件
+                    </div>
+                    {campaignRules!.universalMustDo.map((item, i) => (
+                      <div key={i} style={listItem}>&#x2713; {item}</div>
+                    ))}
                   </div>
-                  {campaignRules!.universalMustDo.map((item, i) => (
-                    <div key={i} style={listItem}>&#x2713; {item}</div>
-                  ))}
-                </div>
-              )}
-              {campaignRules!.universalMustNot.length > 0 && (
-                <div>
-                  <div style={{ fontSize: "11px", fontWeight: 600, color: "#991b1b", marginBottom: "6px" }}>
-                    NG事項
+                )}
+                {campaignRules!.universalMustNot.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: "11px", fontWeight: 600, color: "#991b1b", marginBottom: "6px" }}>
+                      NG事項
+                    </div>
+                    {campaignRules!.universalMustNot.map((item, i) => (
+                      <div key={i} style={listItem}>&#x2717; {item}</div>
+                    ))}
                   </div>
-                  {campaignRules!.universalMustNot.map((item, i) => (
-                    <div key={i} style={listItem}>&#x2717; {item}</div>
-                  ))}
-                </div>
-              )}
+                )}
+              </div>
             </div>
+          )}
+
+          {/* 企画について */}
+          <div style={{ padding: "4mm 20mm 8mm" }}>
+            <h2 style={sectionTitle}>企画について</h2>
+            <p style={valueStyle}>
+              企画の方向性は {channelName} 様にお任せいたします。
+              {hasCreativeDirection && "上記のクリエイティブ方向性を参考に、"}
+              {hasInspirationSeeds && "企画のヒントもご活用いただきながら、"}
+              {channelName} 様ならではの視点と世界観を活かしたコンテンツをご制作ください。
+            </p>
+            <p style={{ ...valueStyle, fontStyle: "italic", color: "#6b7280" }}>
+              ※参考企画案を別紙にてご用意しております。あわせてご参照ください。
+            </p>
           </div>
-        )}
 
-        {/* 企画について */}
-        <div data-section="ideas-note" style={{ padding: "8mm 20mm" }}>
-          <h2 style={sectionTitle}>企画について</h2>
-          <p style={valueStyle}>
-            企画の方向性は {channelName} 様にお任せいたします。
-            {hasCreativeDirection && "上記のクリエイティブ方向性を参考に、"}
-            {hasInspirationSeeds && "企画のヒントもご活用いただきながら、"}
-            {channelName} 様ならではの視点と世界観を活かしたコンテンツをご制作ください。
-          </p>
-          <p style={{ ...valueStyle, fontStyle: "italic", color: "#6b7280" }}>
-            ※参考企画案を別紙にてご用意しております。ご希望の場合はお声がけください。
-          </p>
-        </div>
-
-        {/* フッター */}
-        <div style={{ padding: "8mm 20mm", borderTop: "1px solid #e5e7eb", marginTop: "4mm" }}>
-          <div style={{ fontSize: "9px", color: "#9ca3af", textAlign: "center" }}>
-            本ブリーフは {channelName} 様向けに作成されたコラボレーションガイドです。
-            ご不明点がございましたらお気軽にお問い合わせください。
+          {/* フッター */}
+          <div style={{ padding: "8mm 20mm", borderTop: "1px solid #e5e7eb", marginTop: "4mm" }}>
+            <div style={{ fontSize: "9px", color: "#9ca3af", textAlign: "center" }}>
+              本ブリーフは {channelName} 様向けに作成されたコラボレーションガイドです。
+              ご不明点がございましたらお気軽にお問い合わせください。
+            </div>
           </div>
         </div>
       </div>

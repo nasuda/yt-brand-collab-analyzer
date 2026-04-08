@@ -105,7 +105,7 @@ export const IdeaSheetReport = forwardRef<HTMLDivElement, IdeaSheetProps>(
           </div>
         </div>
 
-        {/* クリエイターコンテキスト — なぜこの企画があなたに合うか */}
+        {/* クリエイターコンテキスト — なぜこの企画がクリエイターに合うか */}
         {pi.creatorContext && (
           <div data-section="context" style={{ padding: "8mm 20mm" }}>
             <div
@@ -177,7 +177,7 @@ export const IdeaSheetReport = forwardRef<HTMLDivElement, IdeaSheetProps>(
         {/* クリエイターの自由裁量 */}
         {pi.creatorFreedom?.length > 0 && (
           <div data-section="freedom" style={{ padding: "8mm 20mm" }}>
-            <h2 style={sectionTitle}>あなたにお任せする部分</h2>
+            <h2 style={sectionTitle}>{channelName}さんにお任せする部分</h2>
             {pi.creatorFreedom.map((item, i) => (
               <div key={i} data-sub-section style={listItem}>&#x25CB; {item}</div>
             ))}
